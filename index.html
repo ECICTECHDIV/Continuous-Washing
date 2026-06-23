@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="title">連續水洗機能耗計算器</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 1200px; margin: 0 auto; }
+h1, h2, h3 { color: #333; }
+.input-group { margin-bottom: 15px; }
+.input-row { display: flex; justify-content: space-between; flex-wrap: wrap; }
+.input-row .input-group { width: 48%; }
+label { display: inline-block; width: 250px; }
+input[type="number"], input[type="text"], select { width: 150px; padding: 5px; }
+button { background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; margin-right: 10px; margin-bottom: 10px; }
+button:hover { background-color: #45a049; }
+
+/* 新添加的樣式 */
+.units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    max-width: 100%;
+}
+
+.unit {
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.unit-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+@media (max-width: 768px) {
+    .units-grid {
+        grid-template-columns: 1fr;
+    }
+}
+#results, #comparison { margin-top: 20px; }
+.washing-process { margin-bottom: 20px; padding: 15px; background-color: #f2f2f2; border-radius: 5px; }
+        .unit { margin-bottom: 10px; padding: 10px; background-color: #e0e0e0; border-radius: 5px; }
+        canvas { margin-top: 20px; max-width: 100%; }
+        .remove-btn { background-color: #f44336; }
+        .remove-btn:hover { background-color: #d32f2f; }
+        #savedProcesses { margin-top: 20px; }
+        .saved-process { margin-bottom: 10px; }
+        .chart-container { display: flex; justify-content: space-between; margin-top: 20px; }
+        .chart-item { width: 48%; }
+        #calculationExplanation { background-color: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 20px; max-height: 400px; overflow-y: auto; }
+        #toggleExplanation, #toggleSavedProcesses { background-color: #2196F3; }
+        #toggleExplanation:hover, #toggleSavedProcesses:hover { background-color: #0b7dda; }
+        #savedProcessesList { display: none; background-color: #f9f9f9; border: 1px solid #ddd; padding: 10px; margin-top: 10px; }
+        #results-grid { display: flex; flex-wrap: wrap; gap: 20px; }
+        .result-card { flex: 1 1 300px; max-width: calc(50% - 10px); border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 20px; overflow: hidden; }
+        .process-summary { 
+            background-color: #f0f0f0; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 5px; 
+            font-size: 12px;
+        }
+        .process-summary h4 { 
+            margin-top: 0; 
+            margin-bottom: 10px;
+        }
+        .units-table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            font-size: 11px;
+            table-layout: fixed;
+        }
+        .units-table th, .units-table td { 
+            border: 1px solid #ccc; 
+            padding: 3px; 
+            text-align: center; 
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .units-table th { 
+            background-color: #e6e6e6; 
+            font-weight: bold;
+        }
+        .unit-type { 
+            font-weight: bold; 
+            text-align: left; 
+            white-space: nowrap;
+            width: 25%;
+        }
+        .unit-number {
+            display: inline-block;
+            width: 20px;
+            text-align: right;
+            margin-right: 5px;
+        }
+        .temp-cell, .water-cell, .recycle-cell, .fresh-water-cell { 
+            width: 18.75%;
+        }
+        .collapsible {
+            background-color: #777;
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+        }
+        .active, .collapsible:hover {
+            background-color: #555;
+        }
+        .content {
+            padding: 0 18px;
+            display: block;
+            overflow: hidden;
+            background-color: #f1f1f1;
+        }
+        #languageToggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+        }
+        .process-collapsible {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            padding: 10px;
+            width: 100%;
+            border: none;
+            text-align: left;
+            outline: none;
+            font-size: 15px;
+            margin-bottom: 10px;
+        }
+        .process-content {
+            display: block;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        @media screen and (max-width: 768px) {
+            .units-table, .units-table tbody, .units-table tr, .units-table td {
+                display: block;
+            }
+            .units-table thead {
+                display: none;
+            }
+            .units-table tr {
+                margin-bottom: 10px;
+            }
+            .units-table td {
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+            }
+            .units-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                text-align: left;
+                font-weight: bold;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button id="languageToggle" onclick="toggleLanguage()">English</button>
+
+    <h1 data-i18n="title">連續水洗機能耗計算器</h1>
+    
+    <button class="collapsible" data-i18n="customParams.title">自定義參數設置</button>
+    <div class="content" id="customParams">
+        <h2 data-i18n="customParams.title">自定義參數設置</h2>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="heatSource" data-i18n="customParams.heatSource">熱源選擇:</label>
+                <select id="heatSource" onchange="updateHeatSourceParams()">
+                    <option value="heavyOil" data-i18n="customParams.heavyOil">重油</option>
+                    <option value="coal" data-i18n="customParams.coal">煤炭</option>
+                    <option value="naturalGas" data-i18n="customParams.naturalGas">天然氣</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="carbonFactor" data-i18n="customParams.carbonFactor">燃料碳排放因子 (kg CO<sub>2</sub>/kg):</label>
+                <input type="number" id="carbonFactor" value="3.15" step="0.01">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="fuelHeatValue" data-i18n="customParams.fuelHeatValue">燃料熱值 (kJ/kg):</label>
+                <input type="number" id="fuelHeatValue" value="40194" step="100">
+            </div>
+            <div class="input-group">
+                <label for="electricityCarbonFactor" data-i18n="customParams.electricityCarbonFactor">電力碳排放因子 (kg CO<sub>2</sub>/kWh):</label>
+                <input type="number" id="electricityCarbonFactor" value="0.5" step="0.01">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="steamLatentHeat" data-i18n="customParams.steamLatentHeat">蒸汽潛熱 (kJ/kg):</label>
+                <input type="number" id="steamLatentHeat" value="2257" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="boilerEfficiency" data-i18n="customParams.boilerEfficiency">鍋爐效率 (%):</label>
+                <input type="number" id="boilerEfficiency" value="80" min="0" max="100" step="1">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="baseLoadPower" data-i18n="customParams.baseLoadPower">基本負載功率 (kW):</label>
+                <input type="number" id="baseLoadPower" value="15" min="0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="singleDrumPower" data-i18n="customParams.singleDrumPower">單鼓洗滌室增量功率 (kW):</label>
+                <input type="number" id="singleDrumPower" value="3" min="0" step="0.1">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="doubleDrumPower" data-i18n="customParams.doubleDrumPower">雙鼓洗滌室增量功率 (kW):</label>
+                <input type="number" id="doubleDrumPower" value="5" min="0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="stackedWashPower" data-i18n="customParams.stackedWashPower">堆疊洗滌室增量功率 (kW):</label>
+                <input type="number" id="stackedWashPower" value="7" min="0" step="0.1">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="heatRecoveryEfficiency" data-i18n="customParams.heatRecoveryEfficiency">熱回收效率 (%):</label>
+                <input type="number" id="heatRecoveryEfficiency" value="30" min="0" max="100" step="1">
+            </div>
+            <div class="input-group">
+                <label for="insulationFactor" data-i18n="customParams.insulationFactor">設備保溫係數 (0-1):</label>
+                <input type="number" id="insulationFactor" value="0.95" min="0" max="1" step="0.01">
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="input-group">
+                <label for="preheatingTime" data-i18n="customParams.preheatingTime">熱機時間 (分鐘):</label>
+                <input type="number" id="preheatingTime" value="30" min="0">
+            </div>
+        </div>
+    </div>
+
+    <div id="washingProcesses">
+        <h2 data-i18n="washingProcess.title">水洗流程設置</h2>
+        <!-- 這裡將動態添加水洗流程 -->
+    </div>
+
+    <button onclick="addWashingProcess()" data-i18n="washingProcess.addProcess">新增水洗流程</button>
+    <button onclick="calculateAllEnergy()" data-i18n="calculate">計算能耗</button>
+    <button id="toggleSavedProcesses" onclick="toggleSavedProcesses()" data-i18n="loadSavedProcesses">讀取已存流程</button>
+    <button id="toggleExplanation" onclick="toggleExplanation()" data-i18n="toggleExplanation">顯示/隱藏計算說明</button>
+
+    <div id="savedProcessesList"></div>
+
+    <div id="calculationExplanation" style="display:none;">
+        <h3 data-i18n="calculationMethod.title">計算方式說明</h3>
+        <h4 data-i18n="calculationMethod.preheatingStage">熱機階段</h4>
+        <p data-i18n="calculationMethod.preheatingElectricity">1. 電力消耗 = 設備總功率 × 熱機時間</p>
+        <p data-i18n="calculationMethod.preheatingThermal">2. 熱能消耗 = 所有單元所需熱水量 × 比熱容 × (進水熱水溫度 - 進水冷水溫度) / 3600</p>
+
+        <h4 data-i18n="calculationMethod.washingStage">水洗流程階段</h4>
+        <p data-i18n="calculationMethod.washingCalcMethod">從最後一個單元開始，逐步向前計算：</p>
+        <p data-i18n="calculationMethod.totalWater">1. 總水量 = 用水比 × 布重 × 布匹長度</p>
+        <p data-i18n="calculationMethod.recycledWater">2. 可用回流水量 = 後一個單元所提供的回流水量(後一單元總水量 × 提供給前一單元的回流水比例 (%) )</p>
+        <p data-i18n="calculationMethod.freshWater">3. 新鮮進水量 = 總水量 - 可用回流水量</p>
+        <p data-i18n="calculationMethod.mixedWaterTemp">4. 混合水溫 = (新鮮進水量 × 進水熱水溫度 + 回流水量 × 回流水溫) / 總水量</p>
+        <p data-i18n="calculationMethod.heatingEnergy">5. 如果混合水溫 < 目標溫度，計算加熱能耗</p>
+        <p data-i18n="calculationMethod.stackedWashTime">6. 如果是堆疊洗滌室，考慮額外的處理時間</p>
+
+        <h4 data-i18n="calculationMethod.finalColdWaterUnit">最後一道冷水單元</h4>
+        <p data-i18n="calculationMethod.finalColdWaterDesc">使用冷水，不需加熱，但納入回流水計算</p>
+
+        <h4 data-i18n="calculationMethod.totalEnergyCalc">總能耗計算</h4>
+        <p data-i18n="calculationMethod.totalElectricity">總電力消耗 = 熱機電力消耗 + 水洗流程電力消耗</p>
+        <p data-i18n="calculationMethod.totalThermal">總熱能消耗 = (熱機熱能消耗 + 水洗流程加熱能耗) × (1 - 熱回收效率) / 保溫係數</p>
+        <p data-i18n="calculationMethod.steamConsumption">蒸汽消耗 = 總熱能消耗 / (蒸汽潛熱 × 鍋爐效率)</p>
+        <p data-i18n="calculationMethod.fuelConsumption">燃料消耗 = 蒸汽消耗 × 蒸汽潛熱 / (燃料熱值 × 鍋爐效率)</p>
+        <p data-i18n="calculationMethod.electricityCarbonEmissions">電力碳排放 = 總電力消耗 × 電力碳排放因子</p>
+        <p data-i18n="calculationMethod.fuelCarbonEmissions">燃料碳排放 = 燃料消耗 × 燃料碳排放因子</p>
+        <p data-i18n="calculationMethod.totalCarbonEmissions">總碳排放 = 電力碳排放 + 燃料碳排放</p>
+
+        <h4 data-i18n="calculationMethod.constantsAndFactors">常數與轉換因子</h4>
+        <p data-i18n="calculationMethod.waterHeatCapacity">水的比熱容：4.186 kJ/(kg·°C)</p>
+        <p data-i18n="calculationMethod.heavyOilHeatValue">重油熱值：40194 kJ/kg</p>
+        <p data-i18n="calculationMethod.coalHeatValue">煤炭熱值：29307 kJ/kg</p>
+        <p data-i18n="calculationMethod.naturalGasHeatValue">天然氣熱值：38931 kJ/kg</p>
+        <p data-i18n="calculationMethod.lhvExplanation">能源熱值為低位熱值（LHV, Lower Heating Value），也稱為淨熱值，這不包括水蒸氣冷凝所釋放的熱量</p>
+        <p data-i18n="calculationMethod.heavyOilCarbonFactor">重油碳排放因子：3.15 kg CO<sub>2</sub>/kg</p>
+        <p data-i18n="calculationMethod.coalCarbonFactor">煤炭碳排放因子：2.86 kg CO<sub>2</sub>/kg</p>
+        <p data-i18n="calculationMethod.naturalGasCarbonFactor">天然氣碳排放因子：2.03 kg CO<sub>2</sub>/kg</p>
+    </div>
+
+    <div id="results-container">
+        <h2 data-i18n="results.title">計算結果</h2>
+        <div id="results-grid"></div>
+    </div>
+    
+    <div id="comparison"></div>
+
+    <div class="chart-container">
+        <div class="chart-item">
+            <canvas id="waterConsumptionChart"></canvas>
+        </div>
+        <div class="chart-item">
+            <canvas id="energyComparisonChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        let processCount = 0;
+        let waterConsumptionChart = null;
+        let energyComparisonChart = null;
+        let currentLanguage = 'zh';
+
+        const translations = {
+            zh: {
+                title: "連續水洗機能耗計算器",
+                customParams: {
+                    title: "自定義參數設置",
+                    heatSource: "熱源選擇:",
+                    heavyOil: "重油",
+                    coal: "煤炭",
+                    naturalGas: "天然氣",
+                    carbonFactor: "燃料碳排放因子 (kg CO2/kg):",
+                    fuelHeatValue: "燃料熱值 (kJ/kg):",
+                    electricityCarbonFactor: "電力碳排放因子 (kg CO2/kWh):",
+                    steamLatentHeat: "蒸汽潛熱 (kJ/kg):",
+                    boilerEfficiency: "鍋爐效率 (%):",
+                    baseLoadPower: "基本負載功率 (kW):",
+                    singleDrumPower: "單鼓洗滌室增量功率 (kW):",
+                    doubleDrumPower: "雙鼓洗滌室增量功率 (kW):",
+                    stackedWashPower: "堆疊洗滌室增量功率 (kW):",
+                    heatRecoveryEfficiency: "熱回收效率 (%):",
+                    insulationFactor: "設備保溫係數 (0-1):",
+                    preheatingTime: "熱機時間 (分鐘):"
+                },
+                washingProcess: {
+                    title: "水洗流程設置",
+                    addProcess: "新增水洗流程",
+                    processName: "流程名稱:",
+                    fabricSpeed: "進布速度 (m/min):",
+                    fabricWeight: "布重 (g/m):",
+                    fabricLength: "布匹總長度 (m):",
+                    hotWaterTemp: "進水熱水溫度 (°C):",
+                    coldWaterTemp: "進水冷水溫度 (°C):",
+                    addUnit: "添加處理單元",
+                    removeProcess: "刪除流程",
+                    saveProcess: "保存流程",
+                    firstUnit: "第一處理單元（固定）",
+                    unit: "處理單元",
+                    finalColdUnit: "最終冷水單元",
+                    unitType: "單元類型:",
+                    singleDrum: "單鼓洗滌室",
+                    doubleDrum: "雙鼓洗滌室",
+                    stackedWash: "堆疊洗滌室",
+                    waterRatio: "用水比 (L/kg):",
+                    recycleRatio: "提供給前一單元的回流水比例 (%):",
+                    recycledWaterTemp: "回流水溫度 (°C):",
+                    removeUnit: "刪除單元",
+                    sprayCount: "噴淋數量:",
+                    processTime: "處理時間 (分鐘):",
+                    targetTemp: "目標溫度 (°C):",
+                    sprayTemp: "噴淋 {i} 溫度 (°C):"
+                },
+                calculate: "計算能耗",
+                loadSavedProcesses: "讀取已存流程",
+                toggleExplanation: "顯示/隱藏計算說明",
+                calculationMethod: {
+                    title: "計算方式說明",
+                    preheatingStage: "熱機階段",
+                    preheatingElectricity: "1. 電力消耗 = 設備總功率 × 熱機時間",
+                    preheatingThermal: "2. 熱能消耗 = 所有單元所需熱水量 × 比熱容 × (進水熱水溫度 - 進水冷水溫度) / 3600",
+                    washingStage: "水洗流程階段",
+                    washingCalcMethod: "從最後一個單元開始，逐步向前計算：",
+                    totalWater: "1. 總水量 = 用水比 × 布重 × 布匹長度",
+                    recycledWater: "2. 可用回流水量 = 後一個單元所提供的回流水量(後一單元總水量 × 提供給前一單元的回流水比例 (%) )",
+                    freshWater: "3. 新鮮進水量 = 總水量 - 可用回流水量",
+                    mixedWaterTemp: "4. 混合水溫 = (新鮮進水量 × 進水熱水溫度 + 回流水量 × 回流水溫) / 總水量",
+                    heatingEnergy: "5. 如果混合水溫 < 目標溫度，計算加熱能耗",
+                    stackedWashTime: "6. 如果是堆疊洗滌室，考慮額外的處理時間",
+                    finalColdWaterUnit: "最後一道冷水單元",
+                    finalColdWaterDesc: "使用冷水，不需加熱，但納入回流水計算",
+                    totalEnergyCalc: "總能耗計算",
+                    totalElectricity: "總電力消耗 = 熱機電力消耗 + 水洗流程電力消耗",
+                    totalThermal: "總熱能消耗 = (熱機熱能消耗 + 水洗流程加熱能耗) × (1 - 熱回收效率) / 保溫係數",
+                    steamConsumption: "蒸汽消耗 = 總熱能消耗 / (蒸汽潛熱 × 鍋爐效率)",
+                    fuelConsumption: "燃料消耗 = 蒸汽消耗 × 蒸汽潛熱 / (燃料熱值 × 鍋爐效率)",
+                    electricityCarbonEmissions: "電力碳排放 = 總電力消耗 × 電力碳排放因子",
+                    fuelCarbonEmissions: "燃料碳排放 = 燃料消耗 × 燃料碳排放因子",
+                    totalCarbonEmissions: "總碳排放 = 電力碳排放 + 燃料碳排放",
+                    constantsAndFactors: "常數與轉換因子",
+                    waterHeatCapacity: "水的比熱容：4.186 kJ/(kg·°C)",
+                    heavyOilHeatValue: "重油熱值：40194 kJ/kg",
+                    coalHeatValue: "煤炭熱值：29307 kJ/kg",
+                    naturalGasHeatValue: "天然氣熱值：38931 kJ/kg",
+                    lhvExplanation: "能源熱值為低位熱值（LHV, Lower Heating Value），也稱為淨熱值，這不包括水蒸氣冷凝所釋放的熱量",
+                    heavyOilCarbonFactor: "重油碳排放因子：3.15 kg CO2/kg",
+                    coalCarbonFactor: "煤炭碳排放因子：2.86 kg CO2/kg",
+                    naturalGasCarbonFactor: "天然氣碳排放因子：2.03 kg CO2/kg"
+                },
+                results: {
+                    title: "計算結果",
+                    processParametersSummary: "流程參數概述",
+                    totalProcessTime: "總處理時間",
+                    fabricSpeed: "進布速度",
+                    fabricWeight: "布重",
+                    fabricLength: "布匹總長度",
+                    hotWaterTemp: "進水熱水溫度",
+                    coldWaterTemp: "進水冷水溫度",
+                    totalWaterConsumption: "總用水量",
+                    electricityConsumption: "電力消耗",
+                    totalElectricityConsumption: "總電力消耗",
+                    thermalEnergyConsumption: "熱能消耗",
+                    steamConsumption: "蒸汽消耗",
+                    fuelConsumption: "燃料消耗",
+                    carbonEmissions: "碳排放",
+                    electricityCarbonEmissions: "電力碳排放",
+                    fuelCarbonEmissions: "燃料碳排放",
+                    totalCarbonEmissions: "總碳排放",
+                    unit: "單元",
+                    temperature: "溫度",
+                    waterRatio: "用水比",
+                    recycleRatio: "回流比",
+                    freshWaterConsumption: "新水用量"
+                },
+                charts: {
+                    energyComparisonTitle: '能耗和碳排放比較圖(每公斤布料)',
+                    totalEnergy: '總耗能消耗 (kWh/kg)',
+                    electricity: '電力消耗 (kWh/kg)',
+                    carbonEmissions: '總碳排放 (kg/kg)',
+                    waterConsumptionPerKg: "每公斤布水消耗 (L/kg)",
+                },
+                misc: {
+                    cannotDeleteFirst: "不能刪除第一個處理單元",
+                    cannotDeleteFinal: "不能刪除最終冷水單元",
+                    unknownUnitType: "未知的單元類型: ",
+                    noValidResults: "沒有成功計算出任何流程的能耗，請檢查輸入數據。",
+                    unitCalcError: "無法計算單元水量需求: ",
+                    energyCalcError: "計算能耗時發生錯誤:",
+                    energyCalcErrorAlert: "計算能耗時發生錯誤: ",
+                    waterRatioElementError: "找不到 waterRatio 元素: ",
+                    processSaved: "流程 \"{processName}\" 已保存",
+                    processLoaded: "流程 \"{processName}\" 已載入",
+                    processNotFound: "找不到名為 \"{processName}\" 的流程",
+                    processDeleted: "流程 \"{processName}\" 已刪除",
+                    savedProcesses: "已保存的流程",
+                    load: "載入",
+                    delete: "刪除",
+                    minutes: "分鐘",
+                    liters: "L",
+                    fabric: "布料"
+                }
+            },
+            en: {
+                title: "Continuous Washing Machine Energy Calculator",
+                customParams: {
+                    title: "Custom Parameters",
+                    heatSource: "Heat Source:",
+                    heavyOil: "Heavy Oil",
+                    coal: "Coal",
+                    naturalGas: "Natural Gas",
+                    carbonFactor: "Fuel Carbon Factor (kg CO2/kg):",
+                    fuelHeatValue: "Fuel Heat Value (kJ/kg):",
+                    electricityCarbonFactor: "Electricity Carbon Factor (kg CO2/kWh):",
+                    steamLatentHeat: "Steam Latent Heat (kJ/kg):",
+                    boilerEfficiency: "Boiler Efficiency (%):",
+                    baseLoadPower: "Base Load Power (kW):",
+                    singleDrumPower: "Single Drum Power (kW):",
+                    doubleDrumPower: "Double Drum Power (kW):",
+                    stackedWashPower: "Stacked Wash Power (kW):",
+                    heatRecoveryEfficiency: "Heat Recovery Efficiency (%):",
+                    insulationFactor: "Insulation Factor (0-1):",
+                    preheatingTime: "Preheating Time (min):"
+                },
+                washingProcess: {
+                    title: "Washing Process Settings",
+                    addProcess: "Add Process",
+                    processName: "Process Name:",
+                    fabricSpeed: "Fabric Speed (m/min):",
+                    fabricWeight: "Fabric Weight (g/m):",
+                    fabricLength: "Fabric Length (m):",
+                    hotWaterTemp: "Hot Water Temp (°C):",
+                    coldWaterTemp: "Cold Water Temp (°C):",
+                    addUnit: "Add Unit",
+                    removeProcess: "Remove Process",
+                    saveProcess: "Save Process",
+                    firstUnit: "First Unit (Fixed)",
+                    unit: "Unit",
+                    finalColdUnit: "Final Cold Unit",
+                    unitType: "Unit Type:",
+                    singleDrum: "Single Drum",
+                    doubleDrum: "Double Drum",
+                    stackedWash: "Stacked Wash",
+                    waterRatio: "Water Ratio (L/kg):",
+                    recycleRatio: "Recycle Ratio (%):",
+                    recycledWaterTemp: "Recycled Water Temp (°C):",
+                    removeUnit: "Remove Unit",
+                    sprayCount: "Spray Count:",
+                    processTime: "Process Time (min):",
+                    targetTemp: "Target Temp (°C):",
+                    sprayTemp: "Spray {i} Temp (°C):"
+                },
+                calculate: "Calculate",
+                loadSavedProcesses: "Load Saved",
+                toggleExplanation: "Show/Hide Explanation",
+                results: {
+                    title: "Results",
+                    processParametersSummary: "Process Summary",
+                    totalProcessTime: "Total Time",
+                    fabricSpeed: "Fabric Speed",
+                    fabricWeight: "Fabric Weight",
+                    fabricLength: "Fabric Length",
+                    hotWaterTemp: "Hot Water Temp",
+                    coldWaterTemp: "Cold Water Temp",
+                    totalWaterConsumption: "Total Water",
+                    electricityConsumption: "Electricity",
+                    totalElectricityConsumption: "Total Electricity",
+                    thermalEnergyConsumption: "Thermal Energy",
+                    steamConsumption: "Steam",
+                    fuelConsumption: "Fuel",
+                    carbonEmissions: "Carbon Emissions",
+                    electricityCarbonEmissions: "Electricity Carbon",
+                    fuelCarbonEmissions: "Fuel Carbon",
+                    totalCarbonEmissions: "Total Carbon",
+                    unit: "Unit",
+                    temperature: "Temp",
+                    waterRatio: "Water Ratio",
+                    recycleRatio: "Recycle Ratio",
+                    freshWaterConsumption: "Fresh Water"
+                },
+                charts: {
+                    energyComparisonTitle: 'Energy & Carbon (per kg fabric)',
+                    totalEnergy: 'Total Energy (kWh/kg)',
+                    electricity: 'Electricity (kWh/kg)',
+                    carbonEmissions: 'CO2 Emissions (kg/kg)',
+                    waterConsumptionPerKg: "Water Consumption (L/kg)",
+                },
+                misc: {
+                    cannotDeleteFirst: "Cannot delete first unit",
+                    cannotDeleteFinal: "Cannot delete final cold unit",
+                    unknownUnitType: "Unknown unit type: ",
+                    noValidResults: "No valid results. Check input data.",
+                    unitCalcError: "Unit water calc error: ",
+                    energyCalcError: "Energy calc error:",
+                    energyCalcErrorAlert: "Energy calc error: ",
+                    waterRatioElementError: "Water ratio element not found: ",
+                    processSaved: "Process \"{processName}\" saved",
+                    processLoaded: "Process \"{processName}\" loaded",
+                    processNotFound: "Process \"{processName}\" not found",
+                    processDeleted: "Process \"{processName}\" deleted",
+                    savedProcesses: "Saved Processes",
+                    load: "Load",
+                    delete: "Delete",
+                    minutes: "min",
+                    liters: "L",
+                    fabric: "fabric"
+                }
+            }
+        };
+
+        function getTranslation(key, lang = currentLanguage) {
+            const keys = key.split('.');
+            let result = translations[lang];
+            for (let k of keys) {
+                if (result && result[k]) {
+                    result = result[k];
+                } else {
+                    console.warn(`Missing translation: ${key}`);
+                    return key;
+                }
+            }
+            return result;
+        }
+
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'zh' ? 'en' : 'zh';
+            document.getElementById('languageToggle').textContent = currentLanguage === 'zh' ? 'English' : '中文';
+            updateLanguage();
+        }
+
+        function updateLanguage() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.innerHTML = getTranslation(key);
+    });
+    updateDynamicContent();
+}
+
+function updateDynamicContent() {
+        document.querySelectorAll('.washing-process').forEach((process) => {
+        const processId = process.id.replace('process', '');
+        updateProcessTitle(processId);
+    });
+
+
+            document.querySelectorAll('.unit').forEach((unit) => {
+                const unitHeader = unit.querySelector('h4');
+                if (unitHeader) {
+                    const unitNumber = unit.getAttribute('data-unit-number');
+                    if (unit.classList.contains('final-cold-drum')) {
+                        unitHeader.textContent = `${unitNumber}. ${getTranslation('washingProcess.finalColdUnit')}`;
+                    } else if (unit.classList.contains('first-unit')) {
+                        unitHeader.textContent = `1. ${getTranslation('washingProcess.firstUnit')}`;
+                    } else {
+                        unitHeader.textContent = `${unitNumber}. ${getTranslation('washingProcess.unit')}`;
+                    }
+                }
+            });
+
+            document.querySelectorAll('button').forEach(button => {
+                if (button.getAttribute('data-i18n')) {
+                    button.textContent = getTranslation(button.getAttribute('data-i18n'));
+                }
+            });
+
+            document.querySelectorAll('select option').forEach(option => {
+                if (option.getAttribute('data-i18n')) {
+                    option.textContent = getTranslation(option.getAttribute('data-i18n'));
+                }
+            });
+
+            if (waterConsumptionChart) updateWaterConsumptionChart(waterConsumptionChart.data.datasets[0].data);
+            if (energyComparisonChart) updateEnergyComparisonChart(energyComparisonChart.data.datasets[0].data, energyComparisonChart.data.datasets[1].data);
+        }
+
+        function updateHeatSourceParams() {
+            const heatSource = document.getElementById('heatSource').value;
+            let carbonFactor, fuelHeatValue;
+            switch (heatSource) {
+                case 'coal':
+                    carbonFactor = 2.86;
+                    fuelHeatValue = 29307;
+                    break;
+                case 'heavyOil':
+                    carbonFactor = 3.15;
+                    fuelHeatValue = 40194;
+                    break;
+                case 'naturalGas':
+                    carbonFactor = 2.03;
+                    fuelHeatValue = 38931;
+                    break;
+                default:
+                    carbonFactor = 3.15;
+                    fuelHeatValue = 40194;
+            }
+            document.getElementById('carbonFactor').value = carbonFactor;
+            document.getElementById('fuelHeatValue').value = fuelHeatValue;
+        }
+
+        function addWashingProcess() {
+                processCount++;
+                const processHtml = `
+                   <div class="washing-process" id="process${processCount}">
+                     <button class="process-collapsible" data-i18n="washingProcess.title" onclick="toggleProcess(${processCount})">${getTranslation('washingProcess.title')} ${processCount}</button>
+            <div class="process-content">
+                        <div class="input-row">
+            <div class="input-group">
+                <label for="processName${processCount}" data-i18n="washingProcess.processName">${getTranslation('washingProcess.processName')}</label>
+                <input type="text" id="processName${processCount}" value="${getTranslation('washingProcess.title')} ${processCount}" oninput="updateProcessTitle(${processCount})">
+            </div>
+            <div class="input-group">
+                <label for="fabricSpeed${processCount}" data-i18n="washingProcess.fabricSpeed">${getTranslation('washingProcess.fabricSpeed')}</label>
+                <input type="number" id="fabricSpeed${processCount}" value="40">
+            </div>
+        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="fabricWeight${processCount}" data-i18n="washingProcess.fabricWeight">${getTranslation('washingProcess.fabricWeight')}</label><input type="number" id="fabricWeight${processCount}" value="500" step="1">
+                            </div>
+                            <div class="input-group">
+                                <label for="fabricLength${processCount}" data-i18n="washingProcess.fabricLength">${getTranslation('washingProcess.fabricLength')}</label>
+                                <input type="number" id="fabricLength${processCount}" value="1000">
+                            </div>
+                        </div>
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label for="hotWaterTemp${processCount}" data-i18n="washingProcess.hotWaterTemp">${getTranslation('washingProcess.hotWaterTemp')}</label>
+                                <input type="number" id="hotWaterTemp${processCount}" value="80" min="60" max="90">
+                            </div>
+                            <div class="input-group">
+                                <label for="coldWaterTemp${processCount}" data-i18n="washingProcess.coldWaterTemp">${getTranslation('washingProcess.coldWaterTemp')}</label>
+                                <input type="number" id="coldWaterTemp${processCount}" value="30" min="20" max="50">
+                            </div>
+                        </div>
+                              <div id="units${processCount}" class="units-grid"></div>
+        <button onclick="addUnit(${processCount})" data-i18n="washingProcess.addUnit">${getTranslation('washingProcess.addUnit')}</button>
+        <button class="remove-btn" onclick="removeProcess(${processCount})" data-i18n="washingProcess.removeProcess">${getTranslation('washingProcess.removeProcess')}</button>
+        <button onclick="saveProcess(${processCount})" data-i18n="washingProcess.saveProcess">${getTranslation('washingProcess.saveProcess')}</button>
+    </div>
+</div>
+            `;
+            document.getElementById('washingProcesses').insertAdjacentHTML('beforeend', processHtml);
+            
+            document.getElementById(`processName${processCount}`).addEventListener('input', () => updateProcessTitle(processCount));
+
+            addFirstUnit(processCount);
+            addStackedUnit(processCount, 4, 60); // 添加第一个堆叠单元，4个喷淋，温度60度
+            addStackedUnit(processCount, 6, 90); // 添加第二个堆叠单元，6个喷淋，温度90度
+            addStackedUnit(processCount, 6, 70); // 添加第三个堆叠单元，6个喷淋，温度70度
+            addFinalColdDrumUnit(processCount);
+            renumberUnits(processCount);
+            updateLanguage();
+
+            document.getElementById(`process${processCount}`).scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function toggleProcess(processId) {
+            const content = document.querySelector(`#process${processId} .process-content`);
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function updateProcessTitle(processId) {
+            const processNameInput = document.getElementById(`processName${processId}`);
+            const processTitle = document.querySelector(`#process${processId} .process-collapsible`);
+            if (processNameInput && processTitle) {
+               const name = processNameInput.value.trim();
+               processTitle.textContent = name || `${getTranslation('washingProcess.title')} ${processId}`;
+            }
+        }
+
+        function addFirstUnit(processId) {
+            const unitsContainer = document.getElementById(`units${processId}`);
+            const unitHtml = `
+                <div class="unit first-unit" id="unit${processId}_1" data-unit-number="1">
+                    <h4 data-i18n="washingProcess.firstUnit">${getTranslation('washingProcess.firstUnit')}</h4>
+                    <div class="input-group">
+                    <label for="unitType${processId}_1" data-i18n="washingProcess.unitType">${getTranslation('washingProcess.unitType')}</label>
+                        <select id="unitType${processId}_1" onchange="updateUnitFields(${processId}, 1)">
+                            <option value="singleDrum" data-i18n="washingProcess.singleDrum">${getTranslation('washingProcess.singleDrum')}</option>
+                            <option value="doubleDrum" data-i18n="washingProcess.doubleDrum">${getTranslation('washingProcess.doubleDrum')}</option>
+                            <option value="stackedWash" data-i18n="washingProcess.stackedWash">${getTranslation('washingProcess.stackedWash')}</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="waterRatio${processId}_1" data-i18n="washingProcess.waterRatio">${getTranslation('washingProcess.waterRatio')}</label>
+                        <input type="number" id="waterRatio${processId}_1" value="5.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycledWaterTemp${processId}_1" data-i18n="washingProcess.recycledWaterTemp">${getTranslation('washingProcess.recycledWaterTemp')}</label>
+                        <input type="number" id="recycledWaterTemp${processId}_1" value="40" min="30" max="80">
+                    </div>
+                    <div id="unitSpecificSettings${processId}_1"></div>
+                </div>
+            `;
+            unitsContainer.insertAdjacentHTML('beforeend', unitHtml);
+            updateUnitFields(processId, 1);
+            updateLanguage();
+        }
+
+        function addUnit(processId) {
+            const unitsContainer = document.getElementById(`units${processId}`);
+            const unitCount = unitsContainer.children.length;
+            const newUnitId = unitCount + 1;
+
+            const unitHtml = `
+                <div class="unit" id="unit${processId}_${newUnitId}" data-unit-number="${newUnitId}">
+                    <h4 data-i18n="washingProcess.unit">${newUnitId}. ${getTranslation('washingProcess.unit')}</h4>
+                    <div class="input-group">
+                        <label for="unitType${processId}_${newUnitId}" data-i18n="washingProcess.unitType">${getTranslation('washingProcess.unitType')}</label>
+                        <select id="unitType${processId}_${newUnitId}" onchange="updateUnitFields(${processId}, ${newUnitId})">
+                            <option value="singleDrum" data-i18n="washingProcess.singleDrum">${getTranslation('washingProcess.singleDrum')}</option>
+                            <option value="doubleDrum" data-i18n="washingProcess.doubleDrum">${getTranslation('washingProcess.doubleDrum')}</option>
+                            <option value="stackedWash" data-i18n="washingProcess.stackedWash">${getTranslation('washingProcess.stackedWash')}</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="waterRatio${processId}_${newUnitId}" data-i18n="washingProcess.waterRatio">${getTranslation('washingProcess.waterRatio')}</label>
+                        <input type="number" id="waterRatio${processId}_${newUnitId}" value="5.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycleRatio${processId}_${newUnitId}" data-i18n="washingProcess.recycleRatio">${getTranslation('washingProcess.recycleRatio')}</label>
+                        <input type="number" id="recycleRatio${processId}_${newUnitId}" value="30" min="0" max="80">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycledWaterTemp${processId}_${newUnitId}" data-i18n="washingProcess.recycledWaterTemp">${getTranslation('washingProcess.recycledWaterTemp')}</label>
+                        <input type="number" id="recycledWaterTemp${processId}_${newUnitId}" value="40" min="30" max="80">
+                    </div>
+                    <div id="unitSpecificSettings${processId}_${newUnitId}">
+                        <!-- 單元特定設置將在這裡動態生成 -->
+                    </div>
+                    <button class="remove-btn" onclick="removeUnit(${processId}, ${newUnitId})" data-i18n="washingProcess.removeUnit">${getTranslation('washingProcess.removeUnit')}</button>
+                </div>
+            `;
+            
+            const finalColdDrum = unitsContainer.querySelector('.final-cold-drum');
+            if (finalColdDrum) {
+                finalColdDrum.insertAdjacentHTML('beforebegin', unitHtml);
+            } else {
+                unitsContainer.insertAdjacentHTML('beforeend', unitHtml);
+            }
+            
+            updateUnitFields(processId, newUnitId);
+            renumberUnits(processId);
+            updateLanguage();
+        }
+
+        function addStackedUnit(processId, sprayCount, defaultTemp) {
+            const unitsContainer = document.getElementById(`units${processId}`);
+            const unitCount = unitsContainer.children.length;
+            const newUnitId = unitCount + 1;
+
+            const unitHtml = `
+                <div class="unit" id="unit${processId}_${newUnitId}" data-unit-number="${newUnitId}">
+                    <h4 data-i18n="washingProcess.unit">${newUnitId}. ${getTranslation('washingProcess.unit')}</h4>
+                    <div class="input-group">
+                        <label for="unitType${processId}_${newUnitId}" data-i18n="washingProcess.unitType">${getTranslation('washingProcess.unitType')}</label>
+                        <select id="unitType${processId}_${newUnitId}" onchange="updateUnitFields(${processId}, ${newUnitId})">
+                            <option value="stackedWash" selected data-i18n="washingProcess.stackedWash">${getTranslation('washingProcess.stackedWash')}</option>
+                            <option value="singleDrum" data-i18n="washingProcess.singleDrum">${getTranslation('washingProcess.singleDrum')}</option>
+                            <option value="doubleDrum" data-i18n="washingProcess.doubleDrum">${getTranslation('washingProcess.doubleDrum')}</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="waterRatio${processId}_${newUnitId}" data-i18n="washingProcess.waterRatio">${getTranslation('washingProcess.waterRatio')}</label>
+                        <input type="number" id="waterRatio${processId}_${newUnitId}" value="5.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycleRatio${processId}_${newUnitId}" data-i18n="washingProcess.recycleRatio">${getTranslation('washingProcess.recycleRatio')}</label>
+                        <input type="number" id="recycleRatio${processId}_${newUnitId}" value="30" min="0" max="80">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycledWaterTemp${processId}_${newUnitId}" data-i18n="washingProcess.recycledWaterTemp">${getTranslation('washingProcess.recycledWaterTemp')}</label>
+                        <input type="number" id="recycledWaterTemp${processId}_${newUnitId}" value="40" min="30" max="80">
+                    </div>
+                    <div id="unitSpecificSettings${processId}_${newUnitId}"></div>
+                    <button class="remove-btn" onclick="removeUnit(${processId}, ${newUnitId})" data-i18n="washingProcess.removeUnit">${getTranslation('washingProcess.removeUnit')}</button>
+                </div>
+            `;
+
+            const finalColdDrum = unitsContainer.querySelector('.final-cold-drum');
+            if (finalColdDrum) {
+                finalColdDrum.insertAdjacentHTML('beforebegin', unitHtml);
+            } else {
+                unitsContainer.insertAdjacentHTML('beforeend', unitHtml);
+            }
+
+            updateUnitFields(processId, newUnitId);
+
+            // 設置預設值
+            document.getElementById(`sprayCount${processId}_${newUnitId}`).value = sprayCount;
+            updateSprayFields(processId, newUnitId);
+            for (let i = 1; i <= sprayCount; i++) {
+                document.getElementById(`sprayTemp${processId}_${newUnitId}_${i}`).value = defaultTemp;
+            }
+
+            renumberUnits(processId);
+        }
+
+        function addFinalColdDrumUnit(processId) {
+            const unitsContainer = document.getElementById(`units${processId}`);
+            const unitCount = unitsContainer.children.length + 1;
+            const unitHtml = `
+                <div class="unit final-cold-drum" id="unit${processId}_${unitCount}" data-unit-number="${unitCount}">
+                    <h4 data-i18n="washingProcess.finalColdUnit">${unitCount}. ${getTranslation('washingProcess.finalColdUnit')}</h4>
+                    <div class="input-group">
+                        <label for="waterRatio${processId}_${unitCount}" data-i18n="washingProcess.waterRatio">${getTranslation('washingProcess.waterRatio')}</label>
+                        <input type="number" id="waterRatio${processId}_${unitCount}" value="3.0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="recycleRatio${processId}_${unitCount}" data-i18n="washingProcess.recycleRatio">${getTranslation('washingProcess.recycleRatio')}</label>
+                        <input type="number" id="recycleRatio${processId}_${unitCount}" value="70" min="0" max="80">
+                    </div>
+                </div>
+            `;
+            unitsContainer.insertAdjacentHTML('beforeend', unitHtml);
+            renumberUnits(processId);
+            updateLanguage();
+        }
+
+        function updateUnitFields(processId, unitId) {
+            const unitType = document.getElementById(`unitType${processId}_${unitId}`).value;
+            const specificSettingsContainer = document.getElementById(`unitSpecificSettings${processId}_${unitId}`);
+            
+            let specificSettingsHtml = '';
+            
+            if (unitType === 'stackedWash') {
+                specificSettingsHtml = `
+                    <div class="input-group">
+                        <label for="sprayCount${processId}_${unitId}" data-i18n="washingProcess.sprayCount">${getTranslation('washingProcess.sprayCount')}</label>
+                        <input type="number" id="sprayCount${processId}_${unitId}" value="6" min="1" onchange="updateSprayFields(${processId}, ${unitId})">
+                    </div>
+                    <div id="spraySettings${processId}_${unitId}">
+                        <!-- 噴淋溫度設置將在這裡動態生成 -->
+                    </div>
+                    <div class="input-group">
+                        <label for="processTime${processId}_${unitId}" data-i18n="washingProcess.processTime">${getTranslation('washingProcess.processTime')}</label>
+                        <input type="number" id="processTime${processId}_${unitId}" value="5" step="0.1">
+                    </div>
+                `;
+            } else {
+                specificSettingsHtml = `
+                    <div class="input-group">
+                        <label for="targetTemp${processId}_${unitId}" data-i18n="washingProcess.targetTemp">${getTranslation('washingProcess.targetTemp')}</label>
+                        <input type="number" id="targetTemp${processId}_${unitId}" value="80">
+                    </div>
+                `;
+            }
+            
+            specificSettingsContainer.innerHTML = specificSettingsHtml;
+            
+            if (unitType === 'stackedWash') {
+                updateSprayFields(processId, unitId);
+            }
+            updateLanguage();
+        }
+
+        function updateSprayFields(processId, unitId) {
+            const sprayCount = parseInt(document.getElementById(`sprayCount${processId}_${unitId}`).value);
+            const spraySettingsContainer = document.getElementById(`spraySettings${processId}_${unitId}`);
+            
+            let spraySettingsHtml = '';
+            for (let i = 1; i <= sprayCount; i++) {
+                spraySettingsHtml += `
+                    <div class="input-group">
+                        <label for="sprayTemp${processId}_${unitId}_${i}">${getTranslation('washingProcess.sprayTemp').replace('{i}', i)}</label>
+                        <input type="number" id="sprayTemp${processId}_${unitId}_${i}" value="80" min="30" max="98">
+                    </div>
+                `;
+            }
+            
+            spraySettingsContainer.innerHTML = spraySettingsHtml;
+            updateLanguage();
+        }
+
+        function removeUnit(processId, unitId) {
+            const unit = document.getElementById(`unit${processId}_${unitId}`);
+            if (!unit.classList.contains('final-cold-drum') && !unit.classList.contains('first-unit')) {
+                unit.remove();
+                renumberUnits(processId);
+            } else if (unit.classList.contains('first-unit')) {
+                alert(getTranslation('misc.cannotDeleteFirst'));
+            } else {
+                alert(getTranslation('misc.cannotDeleteFinal'));
+            }
+        }
+
+        function renumberUnits(processId) {
+            const units = document.getElementById(`units${processId}`).children;
+            Array.from(units).forEach((unit, index) => {
+                const unitNumber = index + 1;
+                unit.setAttribute('data-unit-number', unitNumber);
+                const unitHeader = unit.querySelector('h4');
+                if (unitHeader) {
+                    if (unit.classList.contains('final-cold-drum')) {
+                        unitHeader.textContent = `${unitNumber}. ${getTranslation('washingProcess.finalColdUnit')}`;
+                    } else if (unit.classList.contains('first-unit')) {
+                        unitHeader.textContent = `1. ${getTranslation('washingProcess.firstUnit')}`;
+                    } else {
+                        unitHeader.textContent = `${unitNumber}. ${getTranslation('washingProcess.unit')}`;
+                    }
+                }
+            });
+        }
+
+        function removeProcess(processId) {
+            const process = document.getElementById(`process${processId}`);
+            process.remove();
+        }
+
+        function calculateAllEnergy() {
+            console.log("開始計算能耗");
+            const processes = document.getElementsByClassName('washing-process');
+            let results = [];
+
+            for (let process of processes) {
+                const processId = process.id.replace('process', '');
+                const processName = document.getElementById(`processName${processId}`).value;
+                console.log(`計算流程: ${processName}`);
+                const result = calculateEnergy(processId);
+                if (result) {
+                    result.name = processName;
+                    results.push(result);
+                } else {
+                    console.error(`無法計算流程 "${processName}" 的能耗`);
+                }
+            }
+
+            if (results.length > 0) {
+                console.log("顯示計算結果");
+                displayResults(results);
+                updateComparisonCharts(results);
+            } else {
+                console.error("沒有成功計算出任何流程的能耗");
+                alert(getTranslation('misc.noValidResults'));
+            }
+        }
+
+        function calculateTotalPower(units) {
+            const basePower = parseFloat(document.getElementById('baseLoadPower').value);
+            const singleDrumPower = parseFloat(document.getElementById('singleDrumPower').value);
+            const doubleDrumPower = parseFloat(document.getElementById('doubleDrumPower').value);
+            const stackedWashPower = parseFloat(document.getElementById('stackedWashPower').value);
+
+            let totalPower = basePower;
+
+            for (let unit of units) {
+                let unitType = unit.classList.contains('final-cold-drum') ? 'singleDrum' : unit.querySelector('select[id^="unitType"]')?.value;
+                switch(unitType) {
+                    case 'singleDrum':
+                        totalPower += singleDrumPower;
+                        break;
+                    case 'doubleDrum':
+                        totalPower += doubleDrumPower;
+                        break;
+                    case 'stackedWash':
+                        totalPower += stackedWashPower;
+                        break;
+                    default:
+                        console.warn(getTranslation('misc.unknownUnitType') + unitType);
+                        totalPower += singleDrumPower;
+                }
+            }
+
+            return totalPower;
+        }
+
+        function calculateEnergy(processId) {
+            console.log(`計算過程 ${processId} 的能耗`);
+            try {
+                const fabricSpeed = parseFloat(document.getElementById(`fabricSpeed${processId}`).value);
+                const fabricWeight = parseFloat(document.getElementById(`fabricWeight${processId}`).value);
+                const fabricLength = parseFloat(document.getElementById(`fabricLength${processId}`).value);
+                const totalFabricWeight = (fabricWeight / 1000) * fabricLength; // kg
+
+                const preheatingTime = parseFloat(document.getElementById('preheatingTime').value); // 分鐘
+                const hotWaterTemp = parseFloat(document.getElementById(`hotWaterTemp${processId}`).value);
+                const coldWaterTemp = parseFloat(document.getElementById(`coldWaterTemp${processId}`).value);
+                const heatRecoveryEfficiency = parseFloat(document.getElementById('heatRecoveryEfficiency').value) / 100;
+                const insulationFactor = parseFloat(document.getElementById('insulationFactor').value);
+
+                const units = Array.from(document.getElementById(`units${processId}`).children).reverse();
+                let unitsData = [];
+                let totalWaterConsumption = 0;
+                let totalHeatingEnergy = 0;
+                let additionalProcessTime = 0;
+                let availableRecycledWater = 0;
+                let totalFreshWater = 0;
+
+                // 從最後一個單元開始向前計算
+                for (let i = 0; i < units.length; i++) {
+                    const unitId = units[i].getAttribute('data-unit-number');
+                    const isLastUnit = (i === 0);
+                    const unitData = calculateUnitWaterRequirement(processId, unitId, totalFabricWeight, availableRecycledWater, isLastUnit);
+                    
+                    if (unitData === null) {
+                        throw new Error(getTranslation('misc.unitCalcError') + `processId=${processId}, unitId=${unitId}`);
+                    }
+                    unitsData.unshift(unitData);
+                    totalWaterConsumption += unitData.freshWater;
+                    totalFreshWater += unitData.freshWater;
+                    
+                    availableRecycledWater = unitData.providedRecycledWater;
+                }
+
+                // 預熱階段熱能消耗
+                const preheatingThermalEnergy = calculateHeatingEnergy(totalFreshWater, coldWaterTemp, hotWaterTemp);
+
+                // 計算各單元熱能消耗
+                for (let unitData of unitsData) {
+                    const unitHeatingEnergy = calculateUnitHeatingEnergy(unitData, hotWaterTemp, coldWaterTemp);
+                    totalHeatingEnergy += unitHeatingEnergy;
+
+                    if (unitData.type === 'stackedWash') {
+                        additionalProcessTime += parseFloat(document.getElementById(`processTime${processId}_${unitData.unitId}`).value);
+                    }
+                }
+
+                // 計算總處理時間
+                const baseProcessTime = fabricLength / fabricSpeed;
+                const totalWashingTime = baseProcessTime + additionalProcessTime;
+                const totalProcessTime = preheatingTime + totalWashingTime;
+
+                // 電力能耗（所有設備在整個過程中持續運行）
+                const totalEquipmentPower = calculateTotalPower(units);
+                const preheatingElectricityConsumption = totalEquipmentPower * (preheatingTime / 60); // 轉換為小時
+                const washingElectricityConsumption = totalEquipmentPower * (totalWashingTime / 60); // 轉換為小時
+                const totalElectricityConsumption = preheatingElectricityConsumption + washingElectricityConsumption;
+
+                // 總熱能消耗（包括預熱和處理過程）
+                const totalThermalEnergy = (preheatingThermalEnergy + totalHeatingEnergy) * (1 - heatRecoveryEfficiency) / insulationFactor;
+
+                // 蒸汽消耗
+                const steamLatentHeat = parseFloat(document.getElementById('steamLatentHeat').value);
+                const boilerEfficiency = parseFloat(document.getElementById('boilerEfficiency').value) / 100;
+                const steamConsumption = calculateSteamConsumption(totalThermalEnergy, steamLatentHeat, boilerEfficiency);
+
+                // 燃料消耗
+                const fuelHeatValue = parseFloat(document.getElementById('fuelHeatValue').value);
+                const fuelConsumption = calculateFuelConsumption(totalThermalEnergy, fuelHeatValue, boilerEfficiency);
+
+                // 碳排放
+                const electricityCarbonFactor = parseFloat(document.getElementById('electricityCarbonFactor').value);
+                const fuelCarbonFactor = parseFloat(document.getElementById('carbonFactor').value);
+                const electricityCarbonEmissions = totalElectricityConsumption * electricityCarbonFactor;
+                const fuelCarbonEmissions = fuelConsumption * fuelCarbonFactor;
+                const totalCarbonEmissions = electricityCarbonEmissions + fuelCarbonEmissions;
+
+                console.log("計算完成", {
+                    waterConsumption: totalWaterConsumption,
+                    totalElectricityConsumption,
+                    thermalEnergy: totalThermalEnergy,
+                    steamConsumption,
+                    fuelConsumption,
+                    carbonEmissions: totalCarbonEmissions,
+                    electricityCarbonEmissions,
+                    fuelCarbonEmissions,
+                    totalProcessTime,
+                    fabricWeight: totalFabricWeight,
+                    fabricSpeed,
+                    fabricLength,
+                    unitCount: units.length,
+                    hotWaterTemp,
+                    coldWaterTemp,
+                    unitsData
+                });
+
+                return {
+                    processId: processId,
+                    name: document.getElementById(`processName${processId}`).value,
+                    waterConsumption: totalWaterConsumption,
+                    totalElectricityConsumption,
+                    thermalEnergy: totalThermalEnergy,
+                    steamConsumption,
+                    fuelConsumption,
+                    carbonEmissions: totalCarbonEmissions,
+                    electricityCarbonEmissions,
+                    fuelCarbonEmissions,
+                    totalProcessTime,
+                    fabricWeight: totalFabricWeight,
+                    fabricSpeed,
+                    fabricLength,
+                    unitCount: units.length,
+                    hotWaterTemp,
+                    coldWaterTemp,
+                    unitsData
+                };
+            } catch (error) {
+                console.error(getTranslation('misc.energyCalcError'), error);
+                alert(getTranslation('misc.energyCalcErrorAlert') + error.message);
+                return null;
+            }
+        }
+
+        function calculateUnitWaterRequirement(processId, unitId, totalFabricWeight, previousUnitRecycledWater, isLastUnit) {
+            const waterRatioElement = document.getElementById(`waterRatio${processId}_${unitId}`);
+            const recycleRatioElement = document.getElementById(`recycleRatio${processId}_${unitId}`);
+            const targetTempElement = document.getElementById(`targetTemp${processId}_${unitId}`);
+            const recycledWaterTempElement = document.getElementById(`recycledWaterTemp${processId}_${unitId}`);
+
+            if (!waterRatioElement) {
+                console.error(getTranslation('misc.waterRatioElementError') + `processId=${processId}, unitId=${unitId}`);
+                return null;
+            }
+
+            const waterRatio = parseFloat(waterRatioElement.value) || 0;
+            const recycleRatio = recycleRatioElement ? parseFloat(recycleRatioElement.value) / 100 : 0;
+            const targetTemp = targetTempElement ? parseFloat(targetTempElement.value) : 25;
+            const recycledWaterTemp = recycledWaterTempElement ? parseFloat(recycledWaterTempElement.value) : targetTemp;
+
+            const totalWater = totalFabricWeight * waterRatio;
+            let recycledWater = 0;
+            let freshWater = totalWater;
+
+            if (!isLastUnit) {
+                recycledWater = Math.min(previousUnitRecycledWater, totalWater);
+                freshWater = totalWater - recycledWater;
+            }
+
+            const unitTypeElement = document.getElementById(`unitType${processId}_${unitId}`);
+            const unitType = isLastUnit ? 'finalColdDrum' : (unitTypeElement ? unitTypeElement.value : 'singleDrum');
+
+            let unitData = {
+                unitId: unitId,
+                type: unitType,
+                totalWater: totalWater,
+                recycledWater: recycledWater,
+                freshWater: freshWater,
+                targetTemp: targetTemp,
+                recycledWaterTemp: recycledWaterTemp,
+                providedRecycledWater: totalWater * recycleRatio
+            };
+
+            if (unitType === 'stackedWash') {
+                const sprayCountElement = document.getElementById(`sprayCount${processId}_${unitId}`);
+                if (sprayCountElement) {
+                    const sprayCount = parseInt(sprayCountElement.value);
+                    unitData.sprayTemps = [];
+                    for (let i = 1; i <= sprayCount; i++) {
+                        const sprayTempElement = document.getElementById(`sprayTemp${processId}_${unitId}_${i}`);
+                        if (sprayTempElement) {
+                            unitData.sprayTemps.push(parseFloat(sprayTempElement.value));
+                        } else {
+                            console.warn(`找不到噴淋溫度元素: sprayTemp${processId}_${unitId}_${i}`);
+                            unitData.sprayTemps.push(80); // 默認溫度
+                        }
+                    }
+                } else {
+                    console.warn(`找不到噴淋數量元素: sprayCount${processId}_${unitId}`);
+                    unitData.sprayTemps = [80]; // 默認一個噴淋
+                }
+            }
+
+            return unitData;
+        }
+
+        function calculateUnitHeatingEnergy(unitData, hotWaterTemp, coldWaterTemp) {
+            if (unitData.type === 'finalColdDrum') {
+                return 0; // 最後一個冷水單元不需要加熱
+            }
+
+            // 計算混合水溫
+            const mixedTemp = (unitData.freshWater * hotWaterTemp + unitData.recycledWater * unitData.recycledWaterTemp) / unitData.totalWater;
+
+            if (unitData.type === 'stackedWash') {
+                const sprayCount = unitData.sprayTemps.length;
+                const waterPerSpray = unitData.totalWater / sprayCount;
+                let totalEnergy = 0;
+
+                for (let sprayTemp of unitData.sprayTemps) {
+                    totalEnergy += calculateHeatingEnergy(waterPerSpray, mixedTemp, parseFloat(sprayTemp));
+                }
+
+                return totalEnergy;
+            } else {
+                // 計算加熱能耗
+                return calculateHeatingEnergy(unitData.totalWater, mixedTemp, unitData.targetTemp);
+            }
+        }
+
+        function calculateHeatingEnergy(waterMass, inletTemp, outletTemp) {
+            const waterSpecificHeat = 4.186; // kJ/(kg·°C)
+            return Math.max(0, (waterMass * waterSpecificHeat * (outletTemp - inletTemp)) / 3600); // kWh
+        }
+
+        function calculateSteamConsumption(totalHeatingEnergy, steamLatentHeat, boilerEfficiency) {
+            return (totalHeatingEnergy * 3600) / (steamLatentHeat * boilerEfficiency); // kg
+        }
+
+        function calculateFuelConsumption(totalHeatingEnergy, fuelHeatValue, boilerEfficiency) {
+            return (totalHeatingEnergy * 3600) / (fuelHeatValue * boilerEfficiency); // kg
+        }
+
+        function displayResults(results) {
+            let resultsHtml = '';
+            results.forEach(result => {
+                resultsHtml += `
+                    <div class="result-card">
+                        <h3>${result.name}</h3>
+                        ${generateProcessSummary(result)}
+                        <p>${getTranslation('results.totalProcessTime')}: ${result.totalProcessTime.toFixed(2)} ${getTranslation('misc.minutes')}</p>
+                        <p>${getTranslation('results.totalWaterConsumption')}: ${result.waterConsumption.toFixed(2)} ${getTranslation('misc.liters')} (${(result.waterConsumption / result.fabricWeight).toFixed(2)} ${getTranslation('misc.liters')}/kg ${getTranslation('misc.fabric')})</p>
+                        <p>${getTranslation('results.totalElectricityConsumption')}: ${result.totalElectricityConsumption.toFixed(2)} kWh (${(result.totalElectricityConsumption / result.fabricWeight).toFixed(2)} kWh/kg ${getTranslation('misc.fabric')})</p>
+                        <p>${getTranslation('results.thermalEnergyConsumption')}: ${result.thermalEnergy.toFixed(2)} kWh (${(result.thermalEnergy / result.fabricWeight).toFixed(2)} kWh/kg ${getTranslation('misc.fabric')})</p>
+                        <p>${getTranslation('results.steamConsumption')}: ${result.steamConsumption.toFixed(2)} kg (${(result.steamConsumption / result.fabricWeight).toFixed(2)} kg/kg ${getTranslation('misc.fabric')})</p>
+                        <p>${getTranslation('results.fuelConsumption')}: ${result.fuelConsumption.toFixed(2)} kg (${(result.fuelConsumption / result.fabricWeight).toFixed(2)} kg/kg ${getTranslation('misc.fabric')})</p>
+                        <p>${getTranslation('results.carbonEmissions')}:</p>
+                        <ul>
+                            <li>${getTranslation('results.electricityCarbonEmissions')}: ${result.electricityCarbonEmissions.toFixed(2)} kg CO<sub>2</sub></li>
+                            <li>${getTranslation('results.fuelCarbonEmissions')}: ${result.fuelCarbonEmissions.toFixed(2)} kg CO<sub>2</sub></li>
+                            <li>${getTranslation('results.totalCarbonEmissions')}: ${result.carbonEmissions.toFixed(2)} kg CO<sub>2</sub> (${(result.carbonEmissions / result.fabricWeight).toFixed(2)} kg CO<sub>2</sub>/kg ${getTranslation('misc.fabric')})</li>
+                        </ul>
+                    </div>
+                `;
+            });
+
+            document.getElementById('results-grid').innerHTML = resultsHtml;
+        }
+
+        function generateProcessSummary(result) {
+                const processId = result.processId;
+                let unitsSummary = '';
+                let totalUnits = result.unitsData.length;
+
+                result.unitsData.forEach((unit, index) => {
+
+                const isFirstUnit = index === 0;
+                const isFinalColdUnit = unit.type === 'finalColdDrum';
+                let unitNumber = isFinalColdUnit ? totalUnits : index + 1;
+                let recycleRatioDisplay = '-';
+                if (!isFirstUnit) {
+                    recycleRatioDisplay = ((unit.providedRecycledWater / unit.totalWater) * 100).toFixed(0) + '%';
+                }
+
+                let tempDisplay = unit.type === 'stackedWash' ? 
+                     getSprayTemps(processId, unit.unitId) : 
+                     (unit.targetTemp ? unit.targetTemp + '°C' : '-');
+
+                let waterRatioDisplay = (unit.totalWater / result.fabricWeight).toFixed(2);
+
+                unitsSummary += `
+                    <tr>
+                        <td data-label="${getTranslation('results.unit')}" class="unit-type"><span class="unit-number">${unitNumber}.</span>${getUnitTypeName(unit.type)}</td>
+                        <td data-label="${getTranslation('results.temperature')}" class="temp-cell">${tempDisplay}</td>
+                        <td data-label="${getTranslation('results.waterRatio')}" class="water-cell">${waterRatioDisplay}</td>
+                        <td data-label="${getTranslation('results.recycleRatio')}" class="recycle-cell">${recycleRatioDisplay}</td>
+                        <td data-label="${getTranslation('results.freshWaterConsumption')}" class="fresh-water-cell">${(unit.freshWater / result.fabricWeight).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+
+            return `
+                <div class="process-summary">
+                    <h4>${getTranslation('results.processParametersSummary')}</h4>
+                    <p>
+                        ${getTranslation('results.fabricSpeed')}: ${result.fabricSpeed} m/min | 
+                        ${getTranslation('results.fabricWeight')}: ${(result.fabricWeight * 1000 / result.fabricLength).toFixed(0)} g/m | 
+                        ${getTranslation('results.fabricLength')}: ${result.fabricLength} m
+                    </p>
+                    <p>
+                        ${getTranslation('results.hotWaterTemp')}: ${result.hotWaterTemp}°C | 
+                        ${getTranslation('results.coldWaterTemp')}: ${result.coldWaterTemp}°C
+                    </p>
+                    <table class="units-table">
+                        <thead>
+                            <tr>
+                                <th>${getTranslation('results.unit')}</th>
+                                <th>${getTranslation('results.temperature')}</th>
+                                <th>${getTranslation('results.waterRatio')} (L/kg)</th>
+                                <th>${getTranslation('results.recycleRatio')}</th>
+                                <th>${getTranslation('results.freshWaterConsumption')} (L/kg)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${unitsSummary}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function getUnitTypeName(type) {
+            switch (type) {
+                case 'singleDrum': return getTranslation('washingProcess.singleDrum');
+                case 'doubleDrum': return getTranslation('washingProcess.doubleDrum');
+                case 'stackedWash': return getTranslation('washingProcess.stackedWash');
+                case 'finalColdDrum': return getTranslation('washingProcess.finalColdUnit');
+                default: return type;
+            }
+        }
+
+        function getSprayTemps(processId, unitId) {
+            const sprayCountElement = document.getElementById(`sprayCount${processId}_${unitId}`);
+            if (!sprayCountElement) {
+                 console.warn(`無法找到噴淋數量元素: sprayCount${processId}_${unitId}`);
+                 return 'N/A';
+            }
+            const sprayCount = parseInt(sprayCountElement.value);
+            let temps = [];
+            for (let i = 1; i <= sprayCount; i++) {
+              const sprayTempElement = document.getElementById(`sprayTemp${processId}_${unitId}_${i}`);
+              if (sprayTempElement) {
+                temps.push(sprayTempElement.value);
+              } else {
+                   console.warn(`無法找到噴淋溫度元素: sprayTemp${processId}_${unitId}_${i}`);
+                   temps.push('N/A');
+             }
+         }
+         return temps.join(' / ');
+       }
+
+        function updateComparisonCharts(results) {
+            updateWaterConsumptionChart(results);
+            updateEnergyComparisonChart(results);
+        }
+
+        function calculatePercentageChange(baseValue, currentValue) {
+            const percentage = ((currentValue - baseValue) / baseValue * 100).toFixed(2);
+            return percentage > 0 ? `+${percentage}` : percentage;
+        }
+
+        function updateWaterConsumptionChart(results) {
+    const ctx = document.getElementById('waterConsumptionChart').getContext('2d');
+    if (waterConsumptionChart) {
+        waterConsumptionChart.destroy();
+    }
+
+    const baseValue = results[0].waterConsumption / results[0].fabricWeight;
+    const data = results.map(result => result.waterConsumption / result.fabricWeight);
+    const percentages = results.map((result, index) => 
+        index === 0 ? '' : calculatePercentageChange(baseValue, data[index]) + '%'
+    );
+
+    const maxValue = Math.max(...data);
+    const yAxisMax = maxValue * 1.2; // 将 Y 轴最大值设为数据最大值的 1.2 倍
+
+    waterConsumptionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: results.map(result => result.name),
+            datasets: [{
+                label: getTranslation('charts.waterConsumptionPerKg'),
+                data: data,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: getTranslation('charts.waterConsumptionPerKg')
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2) + ' L/kg';
+                                if (context.dataIndex > 0) {
+                                    label += ' (' + percentages[context.dataIndex] + ')';
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value, context) {
+                        return percentages[context.dataIndex];
+                    },
+                    font: {
+                        weight: 'bold'
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+        function updateEnergyComparisonChart(results) {
+    const ctx = document.getElementById('energyComparisonChart').getContext('2d');
+    if (energyComparisonChart) {
+        energyComparisonChart.destroy();
+    }
+
+    const baseElectricityValue = results[0].totalElectricityConsumption / results[0].fabricWeight;
+    const baseThermalValue = results[0].thermalEnergy / results[0].fabricWeight;
+    const baseCarbonValue = results[0].carbonEmissions / results[0].fabricWeight;
+
+    const electricityData = results.map(result => result.totalElectricityConsumption / result.fabricWeight);
+    const thermalData = results.map(result => result.thermalEnergy / result.fabricWeight);
+    const carbonData = results.map(result => result.carbonEmissions / result.fabricWeight);
+
+    const electricityPercentages = results.map((result, index) => 
+        index === 0 ? '' : calculatePercentageChange(baseElectricityValue, electricityData[index]) + '%'
+    );
+    const thermalPercentages = results.map((result, index) => 
+        index === 0 ? '' : calculatePercentageChange(baseThermalValue, thermalData[index]) + '%'
+    );
+    const carbonPercentages = results.map((result, index) => 
+        index === 0 ? '' : calculatePercentageChange(baseCarbonValue, carbonData[index]) + '%'
+    );
+
+    const maxValue = Math.max(...thermalData, ...electricityData, ...carbonData);
+    const yAxisMax = maxValue * 1.2; // 将 Y 轴最大值设为数据最大值的 1.2 倍
+
+    energyComparisonChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: results.map(result => result.name),
+            datasets: [
+                {
+                    label: getTranslation('charts.totalEnergy'),
+                    data: thermalData,
+                    backgroundColor: 'rgba(135, 206, 235, 0.7)',
+                    borderColor: 'rgba(135, 206, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: getTranslation('charts.electricity'),
+                    data: electricityData,
+                    backgroundColor: 'rgba(144, 238, 144, 0.7)',
+                    borderColor: 'rgba(144, 238, 144, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: getTranslation('charts.carbonEmissions'),
+                    data: carbonData,
+                    backgroundColor: 'rgba(255, 182, 193, 0.7)',
+                    borderColor: 'rgba(255, 182, 193, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: getTranslation('charts.energyComparisonTitle')
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(2);
+                                if (context.dataIndex > 0) {
+                                    label += ' (' + (context.datasetIndex === 0 ? thermalPercentages : context.datasetIndex === 1 ? electricityPercentages : carbonPercentages)[context.dataIndex] + ')';
+                                }
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    formatter: function(value, context) {
+                        return context.datasetIndex === 0 ? thermalPercentages[context.dataIndex] : 
+                               context.datasetIndex === 1 ? electricityPercentages[context.dataIndex] : 
+                               carbonPercentages[context.dataIndex];
+                    },
+                    font: {
+                        weight: 'bold'
+                    }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+        function saveProcess(processId) {
+            const processName = document.getElementById(`processName${processId}`).value;
+            const processData = getProcessData(processId);
+            let savedProcesses = JSON.parse(localStorage.getItem('savedProcesses')) || {};
+            savedProcesses[processName] = processData;
+            localStorage.setItem('savedProcesses', JSON.stringify(savedProcesses));
+            alert(getTranslation('misc.processSaved').replace('{processName}', processName));
+            updateSavedProcessesList();
+        }
+
+        function getProcessData(processId) {
+            const units = document.getElementById(`units${processId}`).children;
+            let unitsData = [];
+
+            for (let unit of units) {
+                const unitId = unit.getAttribute('data-unit-number');
+                const unitType = unit.classList.contains('final-cold-drum') ? 'finalColdDrum' : document.getElementById(`unitType${processId}_${unitId}`)?.value;
+                let unitData = {
+                    type: unitType,
+                    waterRatio: document.getElementById(`waterRatio${processId}_${unitId}`).value,
+                    recycledWaterTemp: document.getElementById(`recycledWaterTemp${processId}_${unitId}`)?.value
+                };
+
+                if (unitType !== 'finalColdDrum' && !unit.classList.contains('first-unit')) {
+                    unitData.recycleRatio = document.getElementById(`recycleRatio${processId}_${unitId}`).value;
+                }
+
+                if (unitType === 'stackedWash') {
+                    unitData.sprayCount = document.getElementById(`sprayCount${processId}_${unitId}`).value;
+                    unitData.processTime = document.getElementById(`processTime${processId}_${unitId}`).value;
+                    unitData.sprayTemps = [];
+                    for (let i = 1; i <= unitData.sprayCount; i++) {
+                        unitData.sprayTemps.push(document.getElementById(`sprayTemp${processId}_${unitId}_${i}`).value);
+                    }
+                } else if (unitType !== 'finalColdDrum') {
+                    unitData.targetTemp = document.getElementById(`targetTemp${processId}_${unitId}`).value;
+                }
+
+                unitsData.push(unitData);
+            }
+
+            return {
+                name: document.getElementById(`processName${processId}`).value,
+                fabricSpeed: document.getElementById(`fabricSpeed${processId}`).value,
+                fabricWeight: document.getElementById(`fabricWeight${processId}`).value,
+                fabricLength: document.getElementById(`fabricLength${processId}`).value,
+                hotWaterTemp: document.getElementById(`hotWaterTemp${processId}`).value,
+                coldWaterTemp: document.getElementById(`coldWaterTemp${processId}`).value,
+                units: unitsData
+            };
+        }
+
+        function loadProcess(processName) {
+            const savedProcesses = JSON.parse(localStorage.getItem('savedProcesses')) || {};
+            const processData = savedProcesses[processName];
+            if (processData) {
+                addWashingProcess();
+                setProcessData(processCount, processData);
+                updateLanguage();
+                alert(getTranslation('misc.processLoaded').replace('{processName}', processName));
+            } else {
+                alert(getTranslation('misc.processNotFound').replace('{processName}', processName));
+            }
+        }
+
+        function setProcessData(processId, processData) {
+            const processNameInput = document.getElementById(`processName${processId}`);
+            processNameInput.value = processData.name;
+            document.getElementById(`fabricSpeed${processId}`).value = processData.fabricSpeed;
+            document.getElementById(`fabricWeight${processId}`).value = processData.fabricWeight;
+            document.getElementById(`fabricLength${processId}`).value = processData.fabricLength;
+            document.getElementById(`hotWaterTemp${processId}`).value = processData.hotWaterTemp;
+            document.getElementById(`coldWaterTemp${processId}`).value = processData.coldWaterTemp;
+            document.getElementById(`units${processId}`).innerHTML = '';
+
+            // 触发 input 事件来更新流程标题
+            processNameInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    updateProcessTitle(processId);
+
+    processData.units.forEach((unitData, index) => {
+        if (index === 0) {
+            addFirstUnit(processId);
+            updateUnitData(processId, 1, unitData);
+        } else if (unitData.type === 'finalColdDrum') {
+            addFinalColdDrumUnit(processId);
+            updateUnitData(processId, document.getElementById(`units${processId}`).children.length, unitData);
+        } else {
+            if (unitData.type === 'stackedWash') {
+                addStackedUnit(processId, unitData.sprayCount, unitData.sprayTemps[0]);
+            } else {
+                addUnit(processId);
+            }
+            updateUnitData(processId, index + 1, unitData);
+        }
+    });
+
+    renumberUnits(processId);
+}
+
+        function updateUnitData(processId, unitId, unitData) {
+            document.getElementById(`unitType${processId}_${unitId}`).value = unitData.type;
+            document.getElementById(`waterRatio${processId}_${unitId}`).value = unitData.waterRatio;
+            if (unitData.recycleRatio) {
+                document.getElementById(`recycleRatio${processId}_${unitId}`).value = unitData.recycleRatio;
+            }
+            document.getElementById(`recycledWaterTemp${processId}_${unitId}`).value = unitData.recycledWaterTemp;
+
+            if (unitData.type === 'stackedWash') {
+                document.getElementById(`sprayCount${processId}_${unitId}`).value = unitData.sprayCount;
+                document.getElementById(`processTime${processId}_${unitId}`).value = unitData.processTime;
+                updateSprayFields(processId, unitId);
+                unitData.sprayTemps.forEach((temp, i) => {
+                    document.getElementById(`sprayTemp${processId}_${unitId}_${i+1}`).value = temp;
+                });
+            } else if (unitData.type !== 'finalColdDrum') {
+                document.getElementById(`targetTemp${processId}_${unitId}`).value = unitData.targetTemp;
+            }
+        }
+
+        function deleteProcess(processName) {
+            let savedProcesses = JSON.parse(localStorage.getItem('savedProcesses')) || {};
+            if (savedProcesses[processName]) {
+                delete savedProcesses[processName];
+                localStorage.setItem('savedProcesses', JSON.stringify(savedProcesses));
+                alert(getTranslation('misc.processDeleted').replace('{processName}', processName));
+                updateSavedProcessesList();
+            } else {
+                alert(getTranslation('misc.processNotFound').replace('{processName}', processName));
+            }
+        }
+
+        function updateSavedProcessesList() {
+            const savedProcesses = JSON.parse(localStorage.getItem('savedProcesses')) || {};
+            const savedProcessesList = document.getElementById('savedProcessesList');
+            let listHtml = `<h3>${getTranslation('misc.savedProcesses')}</h3>`;
+            for (let processName in savedProcesses) {
+                listHtml += `
+                    <div>
+                        <span>${processName}</span>
+                        <button onclick="loadProcess('${processName}')">${getTranslation('misc.load')}</button>
+                        <button onclick="deleteProcess('${processName}')">${getTranslation('misc.delete')}</button>
+                    </div>
+                `;
+            }
+            savedProcessesList.innerHTML = listHtml;
+        }
+
+        function toggleSavedProcesses() {
+            const savedProcessesList = document.getElementById('savedProcessesList');
+            if (savedProcessesList.style.display === 'none') {
+                savedProcessesList.style.display = 'block';
+                updateSavedProcessesList();
+            } else {
+                savedProcessesList.style.display = 'none';
+            }
+        }
+
+        function toggleExplanation() {
+            const explanationDiv = document.getElementById('calculationExplanation');
+            explanationDiv.style.display = explanationDiv.style.display === 'none' ? 'block' : 'none';
+        }
+
+
+        // 設置可折疊區域的功能
+        var coll = document.getElementsByClassName("collapsible");
+        var i;
+
+        for (i = 0; i < coll.length; i++) {
+            coll[i].addEventListener("click", function() {
+                this.classList.toggle("active");
+                var content = this.nextElementSibling;
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                } else {
+                    content.style.display = "block";
+                }
+            });
+        }
+
+        // 初始化語言
+        updateLanguage();
+    </script>
+</body>
+</html>

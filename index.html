@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- 阻擋搜尋引擎抓取與收錄 -->
+    <meta name="robots" content="noindex, nofollow">
+    <title>CPB Recipe Calculator | CPB染色配方計算器</title>
+
+    <!-- PWA 與應用程式設定 -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="./icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+            font-size: 14px;
+            color: #1f2937;
+            padding-top: env(safe-area-inset-top);
+        }
+        
+        .section-card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        @media (min-width: 640px) {
+            .section-card { padding: 1.5rem; }
+        }
+        
+        .section-header {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.875rem;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            letter-spacing: -0.01em;
+        }
+        
+        @media (min-width: 640px) {
+            .section-header { font-size: 1.25rem; margin-bottom: 1.25rem; }
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 0.625rem 0.875rem;
+            font-size: 16px; /* 防止 iOS 自動放大的最佳字體大小 */
+            font-weight: 500;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            color: #1f2937;
+            min-height: 44px;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .input-label {
+            display: block;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            margin-bottom: 0.375rem;
+            color: #374151;
+        }
+        
+        .info-box {
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            border: 1px solid;
+            font-weight: 500;
+        }
+        
+        table { font-size: 0.875rem; border-collapse: separate; border-spacing: 0; }
+        table th, table td { border: 1px solid #e2e8f0; }
+        
+        .table-header {
+            background: #f9fafb;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            color: #374151;
+        }
+        
+        .number-display {
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            input[type="number"], input[type="text"], select { font-size: 16px !important; }
+            body { font-size: 15px; }
+            .section-card { padding: 0.875rem; }
+            
+            #dyeTableBody input[type="text"],
+            #dyeTableBody input[type="number"] {
+                font-size: 14px !important;
+                padding: 0.375rem !important;
+                min-height: 36px;
+            }
+            #dyeTableBody td:first-child { width: 35% !important; }
+        }
+        
+        @media print {
+            body { background: white; }
+            .print\:hidden { display: none !important; }
+            #workOrderSection { page-break-inside: avoid; border: 2px solid #000; margin: 0; padding: 20mm; }
+        }
+        
+        #workOrderSection { background: white; box-sizing: border-box; }
+        
+        @media (min-width: 769px) {
+            #workOrderSection { width: 210mm; max-width: 210mm; min-height: 297mm; }
+            #workOrderSection .mb-4.p-4 .w-20 { width: 6.5rem; flex-shrink: 0; }
+        }
+        
+        @media (max-width: 768px) {
+            #workOrderSection { width: 100%; max-width: 100%; padding: 0.75rem !important; }
+            #workOrderSection .text-sm { font-size: 0.75rem !important; }
+            #workOrderSection table td, #workOrderSection table th { font-size: 0.7rem !important; padding: 0.3rem !important; }
+        }
+        
+        #workOrderSection .solution-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+
+        /* 頂部控制列優化 */
+        .top-nav {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 0.75rem;
+        }
+        .lang-toggle-btn {
+            background: white;
+            border: 2px solid #3b82f6;
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            font-weight: 700;
+            color: #3b82f6;
+            cursor: pointer;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen py-3 sm:py-8">
+
+    <div class="w-full max-w-7xl mx-auto px-2 sm:px-6">
+        <!-- 頂部按鈕區 -->
+        <div class="top-nav print:hidden">
+            <button onclick="toggleLanguage()" class="lang-toggle-btn">
+                <span id="langToggleText">English</span>
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-xl p-3 sm:p-8">
+            <!-- Header -->
+            <div class="flex items-center gap-3 sm:gap-4 mb-5 sm:mb-8 pb-3 sm:pb-6 border-b-2 border-blue-100">
+                <div class="bg-blue-100 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                    <svg class="w-6 h-6 sm:w-9 sm:h-9 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-3xl font-bold text-gray-800" data-i18n="title">CPB染色配方計算器</h1>
+                    <p class="text-xs sm:text-sm text-gray-500 mt-0.5" data-i18n="subtitle">冷軋堆染色工藝</p>
+                </div>
+            </div>
+
+            <!-- Load Recipe Section -->
+            <div class="section-card mb-4 sm:mb-6 bg-gradient-to-r from-teal-50 to-cyan-50">
+                <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                    <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    <h2 class="text-base sm:text-lg font-bold text-gray-800" data-i18n="loadRecipe">加載已保存配方</h2>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <select id="savedRecipes" onchange="loadRecipe()" class="flex-1 input-field bg-white">
+                        <option value="" data-i18n="selectRecipe">-- 選擇已保存的配方 --</option>
+                    </select>
+                    <button onclick="deleteRecipe()" class="px-4 py-2.5 bg-red-500 text-white text-sm font-semibold rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                        <span data-i18n="delete">刪除</span>
+                    </button>
+                </div>
+            </div>
+
+           <!-- Customer Information -->
+            <div class="section-card mb-4 sm:mb-6">
+                <h2 class="section-header">
+                    <span class="w-1 h-5 bg-purple-500 rounded-full"></span>
+                    <span data-i18n="orderInfo">訂單信息</span>
+                </h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div>
+                        <label class="input-label" data-i18n="customer">客戶</label>
+                        <input type="text" id="customerName" data-i18n-placeholder="customerPlaceholder" placeholder="客戶名稱" oninput="updateWorkOrder()" class="input-field">
+                    </div>
+                    <div>
+                        <label class="input-label" data-i18n="colorOrder">顏色/訂單號</label>
+                        <input type="text" id="colorOrder" data-i18n-placeholder="colorOrderPlaceholder" placeholder="顏色名稱或訂單號" oninput="updateWorkOrder()" class="input-field">
+                    </div>
+                    <div>
+                        <label class="input-label" data-i18n="fabricType">布料類型</label>
+                        <input type="text" id="fabricType" data-i18n-placeholder="fabricTypePlaceholder" placeholder="例如: 100% 棉" oninput="updateWorkOrder()" class="input-field">
+                    </div>
+                    <div>
+                        <label class="input-label" data-i18n="batchTime">堆置時間 (小時)</label>
+                        <input type="number" id="batchTime" value="20" min="1" step="1" oninput="updateWorkOrder()" class="input-field">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fabric Information -->
+            <div class="section-card mb-4 sm:mb-6">
+                <h2 class="section-header">
+                    <span class="w-1 h-5 bg-yellow-500 rounded-full"></span>
+                    <span data-i18n="fabricInfo">布料信息</span>
+                </h2>
+                
+                <div class="mb-3 sm:mb-4">
+                    <label class="input-label" data-i18n="calcMode">計算模式</label>
+                    <div class="flex flex-row gap-4">
+                        <label class="flex items-center text-sm cursor-pointer hover:text-blue-600 transition-colors">
+                            <input type="radio" name="fabricMode" value="direct" checked onchange="updateFabricMode()" class="mr-2 w-4 h-4">
+                            <span data-i18n="directInput">直接輸入 (kg)</span>
+                        </label>
+                        <label class="flex items-center text-sm cursor-pointer hover:text-blue-600 transition-colors">
+                            <input type="radio" name="fabricMode" value="calculate" onchange="updateFabricMode()" class="mr-2 w-4 h-4">
+                            <span data-i18n="calculateInput">計算 (布重 × 長度)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="directMode">
+                    <label class="input-label" data-i18n="totalFabric">總布量 (kg)</label>
+                    <input type="number" id="fabricQuantity" value="1000" oninput="calculate()" class="input-field">
+                </div>
+                
+                <div id="calculateMode" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label class="input-label" data-i18n="fabricWeight">布重 (g/m)</label>
+                        <input type="number" id="fabricWeight" value="500" oninput="calculate()" class="input-field">
+                    </div>
+                    <div>
+                        <label class="input-label" data-i18n="fabricLength">長度 (m)</label>
+                        <input type="number" id="fabricLength" value="1000" oninput="calculate()" class="input-field">
+                    </div>
+                    <div class="col-span-1 sm:col-span-2 info-box bg-blue-50 border-blue-200">
+                        <span class="font-semibold text-gray-700" data-i18n="totalFabricCalc">總布量: </span>
+                        <span id="calculatedFabric" class="text-base sm:text-lg font-bold text-blue-600">500.00 kg</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <label class="input-label" data-i18n="pickup">帶液率 (%)</label>
+                    <input type="number" id="pickUp" value="100" oninput="calculate()" class="input-field">
+                </div>
+            </div>
+
+            <!-- Solution Preparation -->
+            <div class="section-card mb-4 sm:mb-6">
+                <h2 class="section-header">
+                    <span class="w-1 h-5 bg-cyan-500 rounded-full"></span>
+                    <span data-i18n="solutionPrep">溶液配制</span>
+                </h2>
+                
+                <div class="mb-3 info-box bg-green-50 border-green-200">
+                    <div class="font-semibold text-green-800 mb-0.5">
+                        <span data-i18n="theoreticalSolution">理論所需溶液: </span>
+                        <span id="theoreticalSolution" class="text-base sm:text-lg font-bold text-green-700">1000.00 ltr</span>
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">
+                        <span class="font-semibold" data-i18n="dosingRatio">配比 4:1 → </span>
+                        <span data-i18n="dye">染料: </span>
+                        <span id="theoreticalDyeSol" class="font-bold text-green-700">800.00 ltr</span>
+                        <span class="mx-1">|</span>
+                        <span data-i18n="alkali">鹼劑: </span>
+                        <span id="theoreticalAlkaliSol" class="font-bold text-green-700">200.00 ltr</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                        <label class="input-label" data-i18n="dyeSolutionPrepare">配制染料溶液 (ltr)</label>
+                        <input type="number" id="dyeSolution" value="840" oninput="this.dataset.userModified='true'; calculate();" class="input-field">
+                        <div id="dyeDifference" class="mt-2 info-box bg-blue-50 border-blue-200">
+                            <span class="font-semibold text-blue-800" data-i18n="vsTheoretical">相比理論: </span>
+                            <span class="text-sm font-bold text-blue-700">+40.00 ltr</span>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="input-label" data-i18n="alkaliSolutionPrepare">配制鹼液 (ltr)</label>
+                        <input type="number" id="alkaliSolution" value="210" oninput="this.dataset.userModified='true'; calculate();" class="input-field">
+                        <div id="alkaliDifference" class="mt-2 info-box bg-green-50 border-green-200">
+                            <span class="font-semibold text-green-800" data-i18n="vsTheoretical">相比理論: </span>
+                            <span class="text-sm font-bold text-green-700">+10.00 ltr</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dye Solution Recipe -->
+            <div class="section-card mb-4 sm:mb-6">
+                <h2 class="section-header">
+                    <span class="w-1 h-5 bg-blue-500 rounded-full"></span>
+                    <span data-i18n="dyeRecipe">染料溶液配方</span>
+                </h2>
+                <div class="mb-3 info-box bg-blue-50 border-blue-200 font-semibold text-xs sm:text-sm">
+                    <span data-i18n="prepareInDye">配制染料溶液: </span>
+                    <span id="dyeSolutionLabel" class="text-blue-700">840.00</span> ltr
+                </div>
+                <div class="overflow-x-auto -mx-2 sm:mx-0">
+                    <table class="w-full border-collapse min-w-full">
+                        <thead>
+                            <tr class="table-header">
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left" style="width: 40%;" data-i18n="item">項目</th>
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left bg-amber-50" style="width: 30%;" data-i18n="recipeGl">配方 (g/l)</th>
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left bg-emerald-50" style="width: 30%;" data-i18n="bulkG">用量 (g)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dyeTableBody">
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" value="黃色" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" oninput="calculate()" class="dye-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right dye-quantity">0.00</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" value="紅色" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" oninput="calculate()" class="dye-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right dye-quantity">0.00</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" value="藍色" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" oninput="calculate()" class="dye-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right dye-quantity">0.00</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" data-i18n-placeholder="dyePlaceholder" placeholder="染料" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" oninput="calculate()" class="dye-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right dye-quantity">0.00</td>
+                            </tr>
+                            <tr class="table-header font-bold bg-gray-100">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-2"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-2 bg-amber-100" style="white-space: nowrap;"><span data-i18n="total">總計:</span> <span id="totalDyeConc" class="number-display">0.00</span> g/l</td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-2 bg-emerald-100"></td>
+                            </tr>
+                            <tr class="table-header bg-blue-50">
+                                <td colspan="3" class="border border-gray-200 px-2 sm:px-4 py-2 font-semibold text-gray-700" data-i18n="auxiliaries">助劑</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" value="潤濕劑" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" step="0.1" oninput="calculate()" class="aux-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right aux-quantity">0.00</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" value="消泡劑" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" step="0.1" oninput="calculate()" class="aux-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right aux-quantity">0.00</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5"><input type="text" data-i18n-placeholder="auxPlaceholder" placeholder="助劑" class="w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-amber-50"><input type="number" placeholder="0" step="0.1" oninput="calculate()" class="aux-recipe w-full px-2 py-1 text-sm font-medium border border-gray-300 rounded focus:border-blue-500"></td>
+                                <td class="border border-gray-200 px-2 sm:px-4 py-1.5 bg-emerald-50 font-semibold number-display text-right aux-quantity">0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Alkali System -->
+            <div class="section-card mb-4 sm:mb-6">
+                <h2 class="section-header">
+                    <span class="w-1 h-5 bg-indigo-500 rounded-full"></span>
+                    <span data-i18n="alkaliSystem">鹼劑體系</span>
+                </h2>
+                
+                <div class="mb-3">
+                    <label class="input-label" data-i18n="alkaliMethod">鹼劑方法</label>
+                    <select id="alkaliMethod" onchange="updateAlkaliMethod()" class="input-field cursor-pointer">
+                        <option value="silicate-free" data-i18n="methodA">A. 無矽酸鹽法</option>
+                        <option value="sodium-silicate" data-i18n="methodB">B. 矽酸鈉法</option>
+                        <option value="modified-silicate" data-i18n="methodC">C. 改性矽酸鈉法</option>
+                        <option value="tropical-region" data-i18n="methodD">D. 無矽酸鹽法(熱帶地區)</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3 info-box bg-green-50 border-green-200 font-semibold text-xs sm:text-sm">
+                    <span data-i18n="prepareInAlkali">配制鹼液: </span>
+                    <span id="alkaliSolutionLabel" class="text-green-700">210.00</span> ltr
+                </div>
+
+                <div id="methodA">
+                    <div class="mb-3">
+                        <label class="input-label" data-i18n="naohType">NaOH類型</label>
+                        <select id="alkaliTypeA" onchange="handleAlkaliTypeChange('A')" class="input-field">
+                            <option value="38">NaOH 38°Bé (32.5% w/w)</option>
+                            <option value="50">NaOH 50°Bé (50.1% w/w)</option>
+                            <option value="flakes" data-i18n="naohFlakes">NaOH 片鹼 (100% w/w)</option>
+                            <option value="custom" data-i18n="custom">自定義</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customInputA" class="hidden mb-3">
+                        <div class="mb-2">
+                            <label class="input-label" data-i18n="baume">波美度 (°Bé)</label>
+                            <input type="number" id="customBaumeA" min="1" max="50" placeholder="38" oninput="updateCustomNaOH('A')" class="input-field">
+                        </div>
+                        <div id="customInfoA" class="info-box bg-gray-50 border-gray-300">
+                            <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                                <div><span class="text-gray-600">ρ:</span> <span id="customRhoA" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">g/l:</span> <span id="customGlA" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">%:</span> <span id="customPercentA" class="font-bold">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 info-box bg-blue-50 border-blue-300">
+                        <p class="font-semibold text-xs sm:text-sm"><span data-i18n="basedOnDye">基於染料: </span><span id="dyeConcA" class="text-blue-600">0.00</span> g/l</p>
+                    </div>
+                </div>
+
+                <div id="methodB" class="hidden">
+                    <div class="grid grid-cols-1 gap-3 mb-3">
+                        <div>
+                            <label class="input-label" data-i18n="silicateConc">矽酸鈉濃度</label>
+                            <select id="silicateConc" onchange="calculate()" class="input-field">
+                                <option value="37-40">37-40°Bé (130 g/l)</option>
+                                <option value="40-42">40-42°Bé (110 g/l)</option>
+                                <option value="48-50" selected>48-50°Bé (100 g/l)</option>
+                                <option value="58-60">58-60°Bé (90 g/l)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label" data-i18n="naohConc">NaOH濃度</label>
+                            <select id="naohConcB" onchange="handleAlkaliTypeChange('B')" class="input-field">
+                                <option value="38" selected>38°Bé (32.5% w/w)</option>
+                                <option value="50">50°Bé (50.1% w/w)</option>
+                                <option value="flakes" data-i18n="naohFlakes">片鹼 (100% w/w)</option>
+                                <option value="custom" data-i18n="custom">自定義</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="customInputB" class="hidden mb-3">
+                        <div class="mb-2">
+                            <label class="input-label" data-i18n="baume">波美度 (°Bé)</label>
+                            <input type="number" id="customBaumeB" min="1" max="50" placeholder="38" oninput="updateCustomNaOH('B')" class="input-field">
+                        </div>
+                        <div id="customInfoB" class="info-box bg-gray-50 border-gray-300">
+                            <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                                <div><span class="text-gray-600">ρ:</span> <span id="customRhoB" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">g/l:</span> <span id="customGlB" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">%:</span> <span id="customPercentB" class="font-bold">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 info-box bg-green-50 border-green-300">
+                        <p class="font-semibold text-xs sm:text-sm"><span data-i18n="basedOnDye">基於染料: </span><span id="dyeConcB" class="text-blue-600">0.00</span> g/l</p>
+                    </div>
+                </div>
+
+                <div id="methodC" class="hidden">
+                    <div class="grid grid-cols-1 gap-3 mb-3">
+                        <div>
+                            <label class="input-label" data-i18n="silicateConc">矽酸鈉濃度</label>
+                            <select id="silicateConcC" onchange="calculate()" class="input-field">
+                                <option value="37-40">37-40°Bé (65 g/l)</option>
+                                <option value="40-42">40-42°Bé (55 g/l)</option>
+                                <option value="48-50" selected>48-50°Bé (50 g/l)</option>
+                                <option value="58-60">58-60°Bé (45 g/l)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label" data-i18n="naohConc">NaOH濃度</label>
+                            <select id="naohConcC" onchange="handleAlkaliTypeChange('C')" class="input-field">
+                                <option value="38" selected>38°Bé (32.5% w/w)</option>
+                                <option value="50">50°Bé (50.1% w/w)</option>
+                                <option value="flakes" data-i18n="naohFlakes">片鹼 (100% w/w)</option>
+                                <option value="custom" data-i18n="custom">自定義</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="customInputC" class="hidden mb-3">
+                        <div class="mb-2">
+                            <label class="input-label" data-i18n="baume">波美度 (°Bé)</label>
+                            <input type="number" id="customBaumeC" min="1" max="50" placeholder="38" oninput="updateCustomNaOH('C')" class="input-field">
+                        </div>
+                        <div id="customInfoC" class="info-box bg-gray-50 border-gray-300">
+                            <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                                <div><span class="text-gray-600">ρ:</span> <span id="customRhoC" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">g/l:</span> <span id="customGlC" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">%:</span> <span id="customPercentC" class="font-bold">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 info-box bg-purple-50 border-purple-300">
+                        <p class="font-semibold text-xs sm:text-sm"><span data-i18n="basedOnDye">基於染料: </span><span id="dyeConcC" class="text-blue-600">0.00</span> g/l</p>
+                    </div>
+                </div>
+
+                <div id="methodD" class="hidden">
+                    <div class="mb-3">
+                        <label class="input-label" data-i18n="naohConc">NaOH濃度</label>
+                        <select id="naohConcD" onchange="handleAlkaliTypeChange('D')" class="input-field">
+                            <option value="50" selected>50°Bé (50.1% w/w)</option>
+                            <option value="38">38°Bé (32.5% w/w)</option>
+                            <option value="flakes" data-i18n="naohFlakes">片鹼 (100% w/w)</option>
+                            <option value="custom" data-i18n="custom">自定義</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customInputD" class="hidden mb-3">
+                        <div class="mb-2">
+                            <label class="input-label" data-i18n="baume">波美度 (°Bé)</label>
+                            <input type="number" id="customBaumeD" min="1" max="50" placeholder="50" oninput="updateCustomNaOH('D')" class="input-field">
+                        </div>
+                        <div id="customInfoD" class="info-box bg-gray-50 border-gray-300">
+                            <div class="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                                <div><span class="text-gray-600">ρ:</span> <span id="customRhoD" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">g/l:</span> <span id="customGlD" class="font-bold">-</span></div>
+                                <div><span class="text-gray-600">%:</span> <span id="customPercentD" class="font-bold">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 info-box bg-orange-50 border-orange-300">
+                        <p class="font-semibold text-xs sm:text-sm"><span data-i18n="basedOnDye">基於染料: </span><span id="dyeConcD" class="text-blue-600">0.00</span> g/l</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto -mx-2 sm:mx-0">
+                    <table class="w-full border-collapse min-w-full">
+                        <thead>
+                            <tr class="table-header">
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left" style="width: 30%;" data-i18n="alkali">鹼劑</th>
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left bg-blue-50" style="width: 25%;" data-i18n="suggested">建議配方</th>
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left bg-amber-50" style="width: 25%;" data-i18n="actual">實際配方</th>
+                                <th class="border border-gray-200 px-2 sm:px-4 py-2 text-left bg-emerald-50" style="width: 20%;" data-i18n="bulkG">用量 (g)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alkaliTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- NaOH Reference Table -->
+            <div class="section-card mt-4 sm:mt-6">
+                <button onclick="toggleTable()" class="w-full flex items-center justify-between text-left hover:opacity-80 transition-opacity">
+                    <h2 class="section-header mb-0">
+                        <span class="w-1 h-5 bg-gray-500 rounded-full"></span>
+                        <span data-i18n="naohTable">NaOH濃度表</span>
+                    </h2>
+                    <svg id="tableIcon" class="w-5 h-5 transform transition-transform text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                
+                <div id="naohTable" class="hidden mt-3 overflow-x-auto">
+                    <table class="w-full border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="table-header">
+                                <th class="border px-2 py-1" data-i18n="baume">波美度 (°Bé)</th>
+                                <th class="border px-2 py-1" data-i18n="specWeight">比重 (ρ)</th>
+                                <th class="border px-2 py-1" data-i18n="naohContent">NaOH含量 (g/l)</th>
+                                <th class="border px-2 py-1" data-i18n="naohPercent">NaOH % (w/w)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="border px-2 py-1 text-center">38</td><td class="border px-2 py-1 text-center font-bold">1.357</td><td class="border px-2 py-1 text-center font-bold">441.0</td><td class="border px-2 py-1 text-center font-bold">32.50</td></tr>
+                            <tr><td class="border px-2 py-1 text-center">50</td><td class="border px-2 py-1 text-center font-bold">1.530</td><td class="border px-2 py-1 text-center font-bold">766.5</td><td class="border px-2 py-1 text-center font-bold">50.10</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Complete Work Order Summary -->
+            <div id="workOrderSection" class="section-card mt-4 sm:mt-6 p-4 sm:p-6 bg-white rounded-xl border-2 border-green-500">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base sm:text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span class="wo-title" data-i18n="workOrder">CPB生產工作單</span>
+                    </h2>
+                    <button onclick="copyWorkOrderAsImage()" class="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white text-xs sm:text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 print:hidden flex-shrink-0">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        <span data-i18n="download">下載</span>
+                    </button>
+                </div>
+
+                <div class="mb-3 p-3 bg-gray-50 rounded-lg border border-gray-300">
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:text-sm">
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="date">日期:</span><span id="woDate" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="qty">數量:</span><span id="woFabric" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="customer">客戶:</span><span id="woCustomer" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="pickup">帶液率:</span><span id="woPickup" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="colorOrder">顏色/訂單:</span><span id="woColorOrder" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="alkali">鹼劑:</span><span id="woMethod" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="fabricLabel">布料:</span><span id="woFabricType" class="font-semibold">-</span></div>
+                        <div class="flex"><span class="text-gray-600 w-16 sm:w-20 flex-shrink-0" data-i18n="batchTimeLabel">堆置時間:</span><span id="woBatchTime" class="font-semibold">-</span></div>
+                    </div>
+                </div>
+
+                <div class="mb-3 solution-grid">
+                    <div class="p-2 bg-blue-50 rounded-lg border border-blue-200 text-center">
+                        <div class="text-[10px] sm:text-xs text-gray-600 mb-0.5" data-i18n="requiredSol">理論所需溶液</div>
+                        <div id="woTotalSol" class="text-xs sm:text-base font-bold text-blue-600">-</div>
+                        <div id="woTheoreticalNote" class="text-[9px] sm:text-xs text-gray-500 mt-0.5">-</div>
+                    </div>
+                    <div class="p-2 bg-indigo-50 rounded-lg border border-indigo-200 text-center">
+                        <div class="text-[10px] sm:text-xs text-gray-600 mb-0.5" data-i18n="prepareDye">配制染料溶液</div>
+                        <div id="woDyeSol" class="text-xs sm:text-base font-bold text-indigo-600">-</div>
+                    </div>
+                    <div class="p-2 bg-green-50 rounded-lg border border-green-200 text-center">
+                        <div class="text-[10px] sm:text-xs text-gray-600 mb-0.5" data-i18n="prepareAlkali">配制鹼液</div>
+                        <div id="woAlkaliSol" class="text-xs sm:text-base font-bold text-green-600">-</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <h3 class="font-bold text-xs sm:text-base mb-1 text-gray-700 flex items-center justify-between">
+                        <span data-i18n="dyeSolRecipe">染料溶液配方</span>
+                        <span class="text-xs font-semibold text-indigo-600"><span data-i18n="prepare">配制:</span> <span id="woDyeSolAmount">840.00</span> ltr</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-blue-100">
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 40%;" data-i18n="item">項目</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 30%;" data-i18n="recipeGl">配方 (g/l)</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 30%;" data-i18n="quantity">用量 (g)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="woDyeTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-bold text-xs sm:text-base mb-1 text-gray-700 flex items-center justify-between">
+                        <span data-i18n="alkaliSolRecipe">鹼液配方</span>
+                        <span class="text-xs font-semibold text-green-600"><span data-i18n="prepare">配制:</span> <span id="woAlkaliSolAmount">210.00</span> ltr</span>
+                    </h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-green-100">
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 30%;" data-i18n="item">項目</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 25%;" data-i18n="suggested">建議配方</th>
+                                    <th class="border border-gray-300 px-2 py-1 text-left" style="width: 25%;" data-i18n="actual">實際配方</th>
+                                    <th class="border border-gray-300 px-2 sm:px-3 py-1 text-left" style="width: 20%;" data-i18n="quantity">用量 (g)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="woAlkaliTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Recipe Section -->
+            <div class="section-card mt-4 sm:mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300">
+                <div class="flex items-center gap-2 mb-2 sm:mb-3">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                    </svg>
+                    <h2 class="text-base sm:text-lg font-bold text-gray-800" data-i18n="saveRecipe">保存當前配方</h2>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    <input type="text" id="recipeName" data-i18n-placeholder="saveRecipePlaceholder" placeholder="輸入配方名稱" class="flex-1 input-field bg-white">
+                    <button onclick="saveRecipe()" class="px-5 py-2.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 shadow-md">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <span data-i18n="saveButton">保存配方</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load html2canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        let currentLang = 'zh';
+        
+        const translations = {
+            zh: {
+                title: 'CPB染色配方計算器', subtitle: '冷軋堆染色工藝', loadRecipe: '加載已保存配方', selectRecipe: '-- 選擇已保存的配方 --',
+                delete: '刪除', orderInfo: '訂單信息', customer: '客戶', customerPlaceholder: '客戶名稱', colorOrder: '顏色/訂單號',
+                colorOrderPlaceholder: '顏色名稱或訂單號', fabricType: '布料類型', fabricTypePlaceholder: '例如: 100% 棉', batchTime: '堆置時間 (小時)',
+                fabricInfo: '布料信息', calcMode: '計算模式', directInput: '直接輸入 (kg)', calculateInput: '計算 (布重 × 長度)',
+                totalFabric: '總布量 (kg)', fabricWeight: '布重 (g/m)', fabricLength: '長度 (m)', totalFabricCalc: '總布量: ', pickup: '帶液率 (%)',
+                solutionPrep: '溶液配制', theoreticalSolution: '理論所需溶液: ', dosingRatio: '配比 4:1 → ', dye: '染料: ', alkali: '鹼劑: ',
+                dyeSolutionPrepare: '配制染料溶液 (ltr)', alkaliSolutionPrepare: '配制鹼液 (ltr)', vsTheoretical: '相比理論: ', dyeRecipe: '染料溶液配方',
+                prepareInDye: '配制染料溶液: ', item: '項目', recipeGl: '配方 (g/l)', bulkG: '用量 (g)', total: '總計:', auxiliaries: '助劑',
+                dyePlaceholder: '染料', auxPlaceholder: '助劑', alkaliSystem: '鹼劑體系', alkaliMethod: '鹼劑方法', methodA: 'A. 無矽酸鹽法',
+                methodB: 'B. 矽酸鈉法', methodC: 'C. 改性矽酸鈉法', methodD: 'D. 無矽酸鹽法(熱帶地區)', prepareInAlkali: '配制鹼液: ', naohType: 'NaOH類型',
+                naohFlakes: 'NaOH 片鹼 (100% w/w)', custom: '自定義', baume: '波美度 (°Bé)', basedOnDye: '基於染料: ', silicateConc: '矽酸鈉濃度',
+                naohConc: 'NaOH濃度', recipe: '配方', suggested: '建議配方', actual: '實際配方', naohTable: 'NaOH濃度表', specWeight: '比重 (ρ)',
+                naohContent: 'NaOH含量 (g/l)', naohPercent: 'NaOH % (w/w)', workOrder: 'CPB生產工作單', download: '下載', date: '日期:', qty: '數量:',
+                fabricLabel: '布料:', alkaliLabel: '鹼劑:', batchTimeLabel: '堆置時間:', requiredSol: '理論所需溶液', prepareDye: '配制染料溶液', prepareAlkali: '配制鹼液',
+                dyeSolRecipe: '染料溶液配方', prepare: '配制:', alkaliSolRecipe: '鹼液配方', quantity: '用量 (g)', saveRecipe: '保存當前配方',
+                saveRecipePlaceholder: '輸入配方名稱 (例如: 紅色-棉布-客戶A)', saveButton: '保存配方', sodaAsh: '純鹼', sodiumSilicate: '矽酸鈉'
+            },
+            en: {
+                title: 'CPB Recipe Calculator', subtitle: 'Cold Pad Batch Process', loadRecipe: 'Load Saved Recipe', selectRecipe: '-- Select a saved recipe --',
+                delete: 'Delete', orderInfo: 'Order Information', customer: 'Customer', customerPlaceholder: 'Customer Name', colorOrder: 'Color/Order',
+                colorOrderPlaceholder: 'Color Name or Order No.', fabricType: 'Fabric Type', fabricTypePlaceholder: 'e.g. 100% Cotton', batchTime: 'Batch Time (hrs)',
+                fabricInfo: 'Fabric Information', calcMode: 'Calculation Mode', directInput: 'Direct Input (kg)', calculateInput: 'Calculate (Fabric Weight × Length)',
+                totalFabric: 'Total Fabric Quantity (kg)', fabricWeight: 'Fabric Weight (g/m)', fabricLength: 'Fabric Length (m)', totalFabricCalc: 'Total Fabric: ', pickup: 'Pick up (%)',
+                solutionPrep: 'Solution Preparation', theoreticalSolution: 'Theoretical Solution Required: ', dosingRatio: 'Dosing Ratio 4:1 → ', dye: 'Dye: ', alkali: 'Alkali: ',
+                dyeSolutionPrepare: 'Dye Solution to Prepare (ltr)', alkaliSolutionPrepare: 'Alkali Solution to Prepare (ltr)', vsTheoretical: 'vs Theoretical: ', dyeRecipe: 'Dye Solution Recipe',
+                prepareInDye: 'Prepare in Dye Solution: ', item: 'Item', recipeGl: 'Recipe (g/l)', bulkG: 'Bulk (g)', total: 'Total:', auxiliaries: 'Auxiliaries',
+                dyePlaceholder: 'Dye', auxPlaceholder: 'Auxiliary', alkaliSystem: 'Alkali System', alkaliMethod: 'Alkali Method', methodA: 'A. Silicate-Free Method',
+                methodB: 'B. Sodium Silicate Method', methodC: 'C. Modified Sodium Silicate Method', methodD: 'D. Silicate-Free Method (Tropical Region)', prepareInAlkali: 'Prepare in Alkali Solution: ', naohType: 'NaOH Type',
+                naohFlakes: 'NaOH Flakes (100% w/w)', custom: 'Custom', baume: 'Baumé (°Bé)', basedOnDye: 'Based on Dye: ', silicateConc: 'Sodium Silicate Concentration',
+                naohConc: 'NaOH Concentration', recipe: 'Recipe', suggested: 'Suggested', actual: 'Actual', naohTable: 'NaOH Concentration Table', specWeight: 'Specific Weight (ρ)',
+                naohContent: 'NaOH Content (g/l)', naohPercent: 'NaOH % (w/w)', workOrder: 'CPB Production Sheet', download: 'Download', date: 'Date:', qty: 'Qty:',
+                fabricLabel: 'Fabric:', alkaliLabel: 'Alkali:', batchTimeLabel: 'Batch Time:', requiredSol: 'Required Sol.', prepareDye: 'Prepare Dye Sol.', prepareAlkali: 'Prepare Alkali Sol.',
+                dyeSolRecipe: 'Dye Solution Recipe', prepare: 'Prepare:', alkaliSolRecipe: 'Alkali Solution Recipe', quantity: 'Quantity (g)', saveRecipe: 'Save Current Recipe',
+                saveRecipePlaceholder: 'Enter recipe name (e.g., Red-Cotton-CustomerA)', saveButton: 'Save Recipe', sodaAsh: 'Soda Ash', sodiumSilicate: 'Sodium Silicate'
+            }
+        };
+        
+        function toggleLanguage() {
+            currentLang = currentLang === 'zh' ? 'en' : 'zh';
+            document.getElementById('langToggleText').textContent = currentLang === 'zh' ? 'English' : '中文';
+            updateLanguage();
+        }
+        
+        function updateLanguage() {
+            const t = translations[currentLang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) el.textContent = t[key];
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (t[key]) el.placeholder = t[key];
+            });
+            updateWorkOrder();
+        }
+        
+        const MOTHER_LIQUOR_DYE_MULTIPLIER = 1.25;
+        const MOTHER_LIQUOR_ALKALI_MULTIPLIER = 5;
+        const DYE_ALKALI_RATIO = 4;
+        const DEFAULT_DYE_BUFFER = 40;
+        const DEFAULT_ALKALI_BUFFER = 10;
+        
+        function saveRecipe() {
+            const recipeName = document.getElementById('recipeName').value.trim();
+            if (!recipeName) {
+                alert(currentLang === 'zh' ? '請輸入配方名稱' : 'Please enter a recipe name');
+                return;
+            }
+            
+            const recipeData = {
+                customerName: document.getElementById('customerName').value,
+                colorOrder: document.getElementById('colorOrder').value,
+                fabricType: document.getElementById('fabricType').value,
+                batchTime: document.getElementById('batchTime').value,
+                fabricMode: document.querySelector('input[name="fabricMode"]:checked').value,
+                fabricQuantity: document.getElementById('fabricQuantity').value,
+                fabricWeight: document.getElementById('fabricWeight').value,
+                fabricLength: document.getElementById('fabricLength').value,
+                pickUp: document.getElementById('pickUp').value,
+                dyeSolution: document.getElementById('dyeSolution').value,
+                alkaliSolution: document.getElementById('alkaliSolution').value,
+                dyeRecipes: Array.from(document.querySelectorAll('.dye-recipe')).map((input, i) => ({
+                    name: document.querySelectorAll('#dyeTableBody tr:not(.bg-gray-100):not(.bg-blue-50) input[type="text"]')[i]?.value || '',
+                    value: input.value
+                })),
+                auxRecipes: Array.from(document.querySelectorAll('.aux-recipe')).map((input, i) => ({
+                    name: document.querySelectorAll('#dyeTableBody tr.bg-blue-50 ~ tr input[type="text"]')[i]?.value || '',
+                    value: input.value
+                })),
+                alkaliMethod: document.getElementById('alkaliMethod').value,
+                alkaliTypeA: document.getElementById('alkaliTypeA').value,
+                customBaumeA: document.getElementById('customBaumeA').value,
+                silicateConc: document.getElementById('silicateConc').value,
+                naohConcB: document.getElementById('naohConcB').value,
+                customBaumeB: document.getElementById('customBaumeB').value,
+                silicateConcC: document.getElementById('silicateConcC').value,
+                naohConcC: document.getElementById('naohConcC').value,
+                customBaumeC: document.getElementById('customBaumeC').value,
+                naohConcD: document.getElementById('naohConcD').value,
+                customBaumeD: document.getElementById('customBaumeD').value
+            };
+            
+            let recipes = JSON.parse(localStorage.getItem('cpbRecipes') || '{}');
+            recipes[recipeName] = recipeData;
+            localStorage.setItem('cpbRecipes', JSON.stringify(recipes));
+            updateRecipeList();
+            document.getElementById('savedRecipes').value = recipeName;
+            alert(currentLang === 'zh' ? '配方保存成功!' : 'Recipe saved successfully!');
+        }
+        
+        function loadRecipe() {
+            const recipeName = document.getElementById('savedRecipes').value;
+            if (!recipeName) return;
+            const recipes = JSON.parse(localStorage.getItem('cpbRecipes') || '{}');
+            const recipeData = recipes[recipeName];
+            if (!recipeData) return;
+            
+            document.getElementById('customerName').value = recipeData.customerName || '';
+            document.getElementById('colorOrder').value = recipeData.colorOrder || '';
+            document.getElementById('fabricType').value = recipeData.fabricType || '';
+            document.getElementById('batchTime').value = recipeData.batchTime || '20';
+            
+            document.querySelector(`input[name="fabricMode"][value="${recipeData.fabricMode}"]`).checked = true;
+            updateFabricMode();
+            document.getElementById('fabricQuantity').value = recipeData.fabricQuantity || '';
+            document.getElementById('fabricWeight').value = recipeData.fabricWeight || '';
+            document.getElementById('fabricLength').value = recipeData.fabricLength || '';
+            document.getElementById('pickUp').value = recipeData.pickUp || '';
+            
+            document.getElementById('dyeSolution').value = recipeData.dyeSolution || '';
+            document.getElementById('dyeSolution').dataset.userModified = 'true';
+            document.getElementById('alkaliSolution').value = recipeData.alkaliSolution || '';
+            document.getElementById('alkaliSolution').dataset.userModified = 'true';
+            
+            const dyeRecipeInputs = document.querySelectorAll('.dye-recipe');
+            const dyeNameInputs = document.querySelectorAll('#dyeTableBody tr:not(.bg-gray-100):not(.bg-blue-50) input[type="text"]');
+            recipeData.dyeRecipes.forEach((item, i) => {
+                if (dyeNameInputs[i]) dyeNameInputs[i].value = item.name;
+                if (dyeRecipeInputs[i]) dyeRecipeInputs[i].value = item.value;
+            });
+            
+            const auxRecipeInputs = document.querySelectorAll('.aux-recipe');
+            const auxNameInputs = document.querySelectorAll('#dyeTableBody tr.bg-blue-50 ~ tr input[type="text"]');
+            recipeData.auxRecipes.forEach((item, i) => {
+                if (auxNameInputs[i]) auxNameInputs[i].value = item.name;
+                if (auxRecipeInputs[i]) auxRecipeInputs[i].value = item.value;
+            });
+            
+            document.getElementById('alkaliMethod').value = recipeData.alkaliMethod || 'silicate-free';
+            updateAlkaliMethod();
+            document.getElementById('alkaliTypeA').value = recipeData.alkaliTypeA || '38';
+            document.getElementById('customBaumeA').value = recipeData.customBaumeA || '';
+            document.getElementById('silicateConc').value = recipeData.silicateConc || '48-50';
+            document.getElementById('naohConcB').value = recipeData.naohConcB || '38';
+            document.getElementById('customBaumeB').value = recipeData.customBaumeB || '';
+            document.getElementById('silicateConcC').value = recipeData.silicateConcC || '48-50';
+            document.getElementById('naohConcC').value = recipeData.naohConcC || '38';
+            document.getElementById('customBaumeC').value = recipeData.customBaumeC || '';
+            document.getElementById('naohConcD').value = recipeData.naohConcD || '50';
+            document.getElementById('customBaumeD').value = recipeData.customBaumeD || '';
+            
+            handleAlkaliTypeChange('A'); handleAlkaliTypeChange('B');
+            handleAlkaliTypeChange('C'); handleAlkaliTypeChange('D');
+            
+            calculate();
+            updateWorkOrder();
+            alert(currentLang === 'zh' ? '配方加載成功!' : 'Recipe loaded successfully!');
+        }
+        
+        function deleteRecipe() {
+            const recipeName = document.getElementById('savedRecipes').value;
+            if (!recipeName) return;
+            if (!confirm(currentLang === 'zh' ? `確定要刪除 "${recipeName}" 嗎?` : `Are you sure you want to delete "${recipeName}"?`)) return;
+            let recipes = JSON.parse(localStorage.getItem('cpbRecipes') || '{}');
+            delete recipes[recipeName];
+            localStorage.setItem('cpbRecipes', JSON.stringify(recipes));
+            updateRecipeList();
+        }
+        
+        function updateRecipeList() {
+            const recipes = JSON.parse(localStorage.getItem('cpbRecipes') || '{}');
+            const select = document.getElementById('savedRecipes');
+            const t = translations[currentLang];
+            select.innerHTML = `<option value="">${t.selectRecipe}</option>`;
+            Object.keys(recipes).sort().forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+        }
+        
+        function formatNumber(num) {
+            const rounded = Math.round(num * 100) / 100;
+            return rounded % 1 === 0 ? rounded.toFixed(1) : rounded.toFixed(2);
+        }
+        
+        const baumeTable = {
+            38: { rho: 1.357, gl: 441.0, percent: 32.50 },
+            50: { rho: 1.530, gl: 766.5, percent: 50.10 }
+        };
+
+        function toggleTable() {
+            document.getElementById('naohTable').classList.toggle('hidden');
+            document.getElementById('tableIcon').classList.toggle('rotate-180');
+        }
+
+        async function copyWorkOrderAsImage() {
+            const button = event.target.closest('button');
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            
+            try {
+                const workOrder = document.getElementById('workOrderSection');
+                const canvas = await html2canvas(workOrder, { backgroundColor: '#ffffff', scale: 2 });
+                canvas.toBlob((blob) => {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `CPB_WorkOrder_${Date.now()}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    button.disabled = false;
+                });
+            } catch (err) {
+                console.error(err);
+                button.disabled = false;
+            }
+        }
+
+        function handleAlkaliTypeChange(method) {
+            const typeSelect = document.getElementById(method === 'A' ? 'alkaliTypeA' : (method === 'B' ? 'naohConcB' : (method === 'C' ? 'naohConcC' : 'naohConcD')));
+            const customInput = document.getElementById('customInput' + method);
+            if (typeSelect.value === 'custom') customInput.classList.remove('hidden');
+            else customInput.classList.add('hidden');
+            calculate();
+        }
+
+        function updateCustomNaOH(method) { calculate(); }
+
+        function getNaOHData(method) {
+            const typeSelect = document.getElementById(method === 'A' ? 'alkaliTypeA' : (method === 'B' ? 'naohConcB' : (method === 'C' ? 'naohConcC' : 'naohConcD')));
+            return naohConcData[typeSelect.value] || { specWeight: 1.357, contentGl: 441.0 };
+        }
+
+        const tropicalRegionNaOH = { ranges: [{ max: 10, cc: 2.5 }, { min: 10, max: 20, cc: 3.0 }, { min: 20, max: 40, cc: 4.5 }, { min: 40, max: 60, cc: 6.5 }, { min: 60, max: 80, cc: 8.5 }, { min: 80, max: 100, cc: 10.5 }, { min: 100, cc: 12.0 }] };
+        
+        function getNaOHForTropicalRegion(dyeConc) {
+            for (let range of tropicalRegionNaOH.ranges) {
+                if (range.max && dyeConc <= range.max) return range.cc;
+                else if (!range.max && dyeConc >= range.min) return range.cc;
+            }
+            return 2.5;
+        }
+        
+        const sodiumSilicateDataB = { '37-40': { gl: 130, naoh: { 20: 23.5, 30: 28.5, 40: 28.5, 50: 33.5, 60: 33.5, 70: 38.5 } }, '40-42': { gl: 110, naoh: { 20: 23.5, 30: 28.5, 40: 28.5, 50: 33.5, 60: 33.5, 70: 38.5 } }, '48-50': { gl: 100, naoh: { 20: 15, 30: 20, 40: 20, 50: 25, 60: 25, 70: 30 } }, '58-60': { gl: 90, naoh: { 20: 6, 30: 11, 40: 11, 50: 16, 60: 16, 70: 21 } } };
+        const sodiumSilicateDataC = { '37-40': { gl: 65, naoh: { 10: 7, 20: 12, 30: 12, 40: 17, 50: 17, 60: 22 } }, '40-42': { gl: 55, naoh: { 10: 7, 20: 12, 30: 12, 40: 17, 50: 17, 60: 22 } }, '48-50': { gl: 50, naoh: { 10: 5, 20: 10, 30: 10, 40: 15, 50: 15, 60: 20 } }, '58-60': { gl: 45, naoh: { 10: 3, 20: 7, 30: 7, 40: 11, 50: 11, 60: 16 } } };
+        const naohConcData = { '38': { specWeight: 1.357, contentGl: 441.0 }, '50': { specWeight: 1.530, contentGl: 766.5 }, 'flakes': { specWeight: 1.0, contentGl: 1000.0 } };
+
+        function getAlkaliRecommendationA(dyeConc) {
+            const naoh38 = 5 + (dyeConc / 5);
+            return { naoh38: parseFloat(naoh38.toFixed(1)), naoh50: parseFloat((naoh38 * 441.0 / 766.5).toFixed(1)), naohFlakes: parseFloat((naoh38 * 441.0 / 1000).toFixed(1)) };
+        }
+
+        function getNaOHForSodiumSilicate(dyeConc, data) {
+            const keys = Object.keys(data.naoh).map(Number).sort((a,b) => a-b);
+            for (let i = 0; i < keys.length; i++) if (dyeConc <= keys[i]) return data.naoh[keys[i]];
+            return data.naoh[keys[keys.length - 1]];
+        }
+
+        function updateFabricMode() {
+            const mode = document.querySelector('input[name="fabricMode"]:checked').value;
+            document.getElementById('directMode').classList.toggle('hidden', mode !== 'direct');
+            document.getElementById('calculateMode').classList.toggle('hidden', mode !== 'calculate');
+            calculate();
+        }
+
+        function updateAlkaliMethod() {
+            const method = document.getElementById('alkaliMethod').value;
+            document.getElementById('methodA').classList.toggle('hidden', method !== 'silicate-free');
+            document.getElementById('methodB').classList.toggle('hidden', method !== 'sodium-silicate');
+            document.getElementById('methodC').classList.toggle('hidden', method !== 'modified-silicate');
+            document.getElementById('methodD').classList.toggle('hidden', method !== 'tropical-region');
+            calculate();
+        }
+
+        function calculate() {
+            const mode = document.querySelector('input[name="fabricMode"]:checked').value;
+            let fabricQty = mode === 'direct' ? (parseFloat(document.getElementById('fabricQuantity').value) || 0) : ((parseFloat(document.getElementById('fabricWeight').value) || 0) * (parseFloat(document.getElementById('fabricLength').value) || 0) / 1000);
+            if (mode !== 'direct') document.getElementById('calculatedFabric').textContent = formatNumber(fabricQty) + ' kg';
+
+            const pickUp = parseFloat(document.getElementById('pickUp').value) || 0;
+            const theoretical = fabricQty * pickUp / 100;
+            document.getElementById('theoreticalSolution').textContent = formatNumber(theoretical) + ' ltr';
+
+            const theoreticalDye = theoretical * DYE_ALKALI_RATIO / (DYE_ALKALI_RATIO + 1);
+            const theoreticalAlkali = theoretical * 1 / (DYE_ALKALI_RATIO + 1);
+            document.getElementById('theoreticalDyeSol').textContent = formatNumber(theoreticalDye) + ' ltr';
+            document.getElementById('theoreticalAlkaliSol').textContent = formatNumber(theoreticalAlkali) + ' ltr';
+
+            const dyeSolInput = document.getElementById('dyeSolution');
+            const alkaliSolInput = document.getElementById('alkaliSolution');
+            if (!dyeSolInput.dataset.userModified) dyeSolInput.value = (theoreticalDye + DEFAULT_DYE_BUFFER).toFixed(2);
+            if (!alkaliSolInput.dataset.userModified) alkaliSolInput.value = (theoreticalAlkali + DEFAULT_ALKALI_BUFFER).toFixed(2);
+
+            const dyeSol = parseFloat(dyeSolInput.value) || 0;
+            const alkaliSol = parseFloat(alkaliSolInput.value) || 0;
+            
+            document.getElementById('dyeSolutionLabel').textContent = formatNumber(dyeSol);
+            document.getElementById('alkaliSolutionLabel').textContent = formatNumber(alkaliSol);
+
+            const dyeRecipes = document.querySelectorAll('.dye-recipe');
+            const dyeQuantities = document.querySelectorAll('.dye-quantity');
+            let totalDye = 0;
+            dyeRecipes.forEach((input, i) => {
+                const recipe = parseFloat(input.value) || 0;
+                totalDye += recipe;
+                dyeQuantities[i].textContent = formatNumber(recipe * MOTHER_LIQUOR_DYE_MULTIPLIER * dyeSol);
+            });
+            document.getElementById('totalDyeConc').textContent = formatNumber(totalDye);
+
+            const auxRecipes = document.querySelectorAll('.aux-recipe');
+            const auxQuantities = document.querySelectorAll('.aux-quantity');
+            auxRecipes.forEach((input, i) => {
+                const recipe = parseFloat(input.value) || 0;
+                auxQuantities[i].textContent = formatNumber(recipe * MOTHER_LIQUOR_DYE_MULTIPLIER * dyeSol);
+            });
+
+            calculateAlkaliQuantities();
+            updateWorkOrder();
+        }
+
+        function calculateAlkaliQuantities() { updateWorkOrder(); }
+
+        function updateWorkOrder() {
+            const today = new Date();
+            document.getElementById('woDate').textContent = today.toISOString().split('T')[0];
+            
+            document.getElementById('woCustomer').textContent = document.getElementById('customerName')?.value || '-';
+            document.getElementById('woColorOrder').textContent = document.getElementById('colorOrder')?.value || '-';
+            document.getElementById('woFabricType').textContent = document.getElementById('fabricType')?.value || '-';
+            document.getElementById('woBatchTime').textContent = (document.getElementById('batchTime')?.value || '20') + ' ' + (currentLang === 'zh' ? '小時' : 'hrs');
+            
+            const mode = document.querySelector('input[name="fabricMode"]:checked').value;
+            let fabricQty = mode === 'direct' ? (parseFloat(document.getElementById('fabricQuantity').value) || 0) : ((parseFloat(document.getElementById('fabricWeight').value) || 0) * (parseFloat(document.getElementById('fabricLength').value) || 0) / 1000);
+            document.getElementById('woFabric').textContent = formatNumber(fabricQty) + ' kg';
+            document.getElementById('woPickup').textContent = (parseFloat(document.getElementById('pickUp').value) || 0) + '%';
+            
+            const method = document.getElementById('alkaliMethod').value;
+            const methodNames = {
+                'silicate-free': currentLang === 'zh' ? 'A. 無矽酸鹽法' : 'A. Silicate-Free',
+                'sodium-silicate': currentLang === 'zh' ? 'B. 矽酸鈉法' : 'B. Silicate',
+                'modified-silicate': currentLang === 'zh' ? 'C. 改性矽酸鈉法' : 'C. Modified Silicate',
+                'tropical-region': currentLang === 'zh' ? 'D. 無矽酸鹽法(熱帶)' : 'D. Silicate-Free (Tropical)'
+            };
+            document.getElementById('woMethod').textContent = methodNames[method];
+            
+            const pickUp = parseFloat(document.getElementById('pickUp').value) || 0;
+            const theoretical = fabricQty * pickUp / 100;
+            const theoreticalDye = theoretical * DYE_ALKALI_RATIO / (DYE_ALKALI_RATIO + 1);
+            const theoreticalAlkali = theoretical * 1 / (DYE_ALKALI_RATIO + 1);
+            
+            const dyeSol = parseFloat(document.getElementById('dyeSolution').value) || 0;
+            const alkaliSol = parseFloat(document.getElementById('alkaliSolution').value) || 0;
+            
+            document.getElementById('woTotalSol').innerHTML = `<div>${formatNumber(theoretical)} ltr</div>`;
+            document.getElementById('woTheoreticalNote').innerHTML = `<span>染料 ${formatNumber(theoreticalDye)}</span> <span>鹼劑 ${formatNumber(theoreticalAlkali)}</span>`;
+            document.getElementById('woDyeSol').innerHTML = `<div>${formatNumber(dyeSol)} ltr</div>`;
+            document.getElementById('woAlkaliSol').innerHTML = `<div>${formatNumber(alkaliSol)} ltr</div>`;
+            
+            const dyeTableBody = document.getElementById('woDyeTable');
+            dyeTableBody.innerHTML = '';
+            
+            const dyeInputs = document.querySelectorAll('.dye-recipe');
+            const dyeNames = document.querySelectorAll('#dyeTableBody tr:not(.bg-gray-100):not(.bg-blue-50) input[type="text"]');
+            let totalDyeConc = 0;
+            
+            for (let i = 0; i < 4; i++) {
+                const recipe = parseFloat(dyeInputs[i]?.value) || 0;
+                const name = dyeNames[i]?.value || '-';
+                const quantity = recipe * MOTHER_LIQUOR_DYE_MULTIPLIER * dyeSol;
+                totalDyeConc += recipe;
+                dyeTableBody.innerHTML += `<tr><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${recipe > 0 ? formatNumber(recipe) : '-'}</td><td class="border px-2 py-1 font-semibold">${recipe > 0 ? formatNumber(quantity) : '-'}</td></tr>`;
+            }
+            
+            dyeTableBody.innerHTML += `<tr class="bg-gray-100 font-bold"><td class="border px-2 py-1"></td><td class="border px-2 py-1">總計: ${formatNumber(totalDyeConc)} g/l</td><td class="border px-2 py-1"></td></tr>`;
+            
+            const auxInputs = document.querySelectorAll('.aux-recipe');
+            const auxNames = document.querySelectorAll('#dyeTableBody tr.bg-blue-50 ~ tr input[type="text"]');
+            for (let i = 0; i < 3; i++) {
+                const recipe = parseFloat(auxInputs[i]?.value) || 0;
+                const name = auxNames[i]?.value || '-';
+                const quantity = recipe * MOTHER_LIQUOR_DYE_MULTIPLIER * dyeSol;
+                dyeTableBody.innerHTML += `<tr class="bg-blue-50"><td class="border px-2 py-1">${name}</td><td class="border px-2 py-1">${recipe > 0 ? formatNumber(recipe) : '-'}</td><td class="border px-2 py-1 font-semibold">${recipe > 0 ? formatNumber(quantity) : '-'}</td></tr>`;
+            }
+            
+            document.getElementById('woDyeSolAmount').textContent = formatNumber(dyeSol);
+            document.getElementById('woAlkaliSolAmount').textContent = formatNumber(alkaliSol);
+        }
+
+        updateRecipeList();
+        calculate();
+        updateWorkOrder();
+    </script>
+
+    <!-- 註冊 Service Worker (離線快取服務) -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js").catch(err => {
+            console.error("Service Worker 註冊失敗:", err);
+          });
+        });
+      }
+    </script>
+</body>
+</html>

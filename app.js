@@ -25,6 +25,26 @@ document.querySelectorAll(".tab-btn").forEach(btn=>{
 const state = { lang:"zh" };
 function T(key){ return TRANSLATIONS[state.lang][key] || key; }
 
+// 「計算方式」分頁：把 data.js 裡 m_xxxTitle/m_xxxLines 這幾組陣列渲染成條列式說明，
+// 換語言時 applyLanguage() 會呼叫這個重新渲染一次
+function methodGroupHTML(titleKey, linesKey){
+  const lines = TRANSLATIONS[state.lang][linesKey] || [];
+  return `
+    <div class="grp-title">${T(titleKey)}</div>
+    <ol class="method-list">${lines.map(line => `<li>${line}</li>`).join("")}</ol>
+  `;
+}
+function renderMethodsPanel(){
+  const el = document.getElementById("methodsOutput");
+  if(!el) return;
+  el.innerHTML =
+    methodGroupHTML("m_preheatTitle", "m_preheatLines") +
+    methodGroupHTML("m_chainTitle", "m_chainLines") +
+    methodGroupHTML("m_heatingTitle", "m_heatingLines") +
+    methodGroupHTML("m_timeTitle", "m_timeLines") +
+    methodGroupHTML("m_totalTitle", "m_totalLines");
+}
+
 function setLanguage(lang){
   state.lang = lang;
   document.getElementById("langBtnZh").classList.toggle("active", lang==="zh");
@@ -364,6 +384,7 @@ document.getElementById("clearProcessBtn").addEventListener("click", ()=>{
   document.getElementById("resultsOutput").innerHTML = "";
 });
 addProcess(); // 預設先給一個流程
+renderMethodsPanel(); // 「計算方式」分頁的內容也要在一開始就渲染，不是只有切換語言時才畫
 
 function escapeHtmlE(str){
   const div = document.createElement("div");

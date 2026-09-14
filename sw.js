@@ -1,6 +1,6 @@
 // 連續水洗能耗計算工具 — Service Worker
 // 策略：網路優先（online 時一定抓最新版本），只有離線時才退回使用快取。
-const CACHE_NAME = "contwash-energy-tool-v2";
+const CACHE_NAME = "contwash-energy-tool-v3";
 const CORE_ASSETS = [
   "./index.html",
   "./data.js",

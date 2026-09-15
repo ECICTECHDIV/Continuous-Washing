@@ -134,11 +134,14 @@
   header.top .head-actions .lang-seg-wrap .lang-seg-btn + .lang-seg-btn{border-left:1.5px solid var(--brand);}
   header.top .head-actions .lang-seg-wrap .lang-seg-btn.active{background:var(--brand);color:#fff;}
   .top-bar-label{
-    display:block;
+    display:none;
     font-size:.82rem;
     font-weight:600;
     color:var(--ink-soft);
     margin-bottom:4px;
+  }
+  @media (min-width:640px){
+    .top-bar-label{ display:block; }
   }
   .top-bar-slim{
     padding:1rem 1rem 0;
